@@ -7,7 +7,7 @@
 
 #include <chainparamsseeds.h>
 #include <consensus/merkle.h>
-#include <hash.h> // for signet block challenge hash
+#include <hash.h>
 #include <signet.h>
 #include <tinyformat.h>
 #include <util/system.h>
@@ -60,8 +60,10 @@ static inline CBlock CreateGenesisBlock(const char* pszTimestamp, const CScript&
 static inline CBlock CreateGenesisBlock(uint32_t nTime, uint32_t nNonce, uint32_t nBits, int32_t nVersion, const CAmount& genesisReward)
 {
     const char* pszTimestamp = "The Times 03/Jan/2009 Chancellor on brink of second bailout for banks";
+    const CScript coinbase_sig = CScript() << 486604799 << CScriptNum(4) << std::vector<unsigned char>((const unsigned char*)pszTimestamp, (const unsigned char*)pszTimestamp + strlen(pszTimestamp));
+
     const CScript genesisOutputScript = CScript() << ParseHex("04678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef38c4f35504e51ec112de5c384df7ba0b8d578a4c702b6bf11d5f") << OP_CHECKSIG;
-    return CreateGenesisBlock(pszTimestamp, genesisOutputScript, nTime, nNonce, nBits, nVersion, genesisReward);
+    return CreateGenesisBlock(coinbase_sig, genesisOutputScript, nTime, nNonce, nBits, nVersion, genesisReward);
 }
 
 CBlock CreateSignetGenesisBlock(const CScript& block_script, uint32_t block_nonce)
@@ -494,6 +496,30 @@ void CRegTestParams::UpdateFromArgs(const ArgsManager& args)
     m_is_test_chain = args.GetBoolArg("-is_test_chain", true);
 }
 
+/**
+ * Custom params for creating many chains with different genesis blocks.
+ */
+class CCustomParams : public CRegTestParams {
+public:
+    CCustomParams(const std::string& chain, ArgsManager& args) : CRegTestParams(args)
+    {
+        strNetworkID = chain;
+        UpdateFromArgs(args);
+
+        CHashWriter h(SER_DISK, 0);
+        h << strNetworkID;
+        const uint256 hash = h.GetHash();
+        CScript coinbase_sig = CScript() << std::vector<uint8_t>(hash.begin(), hash.end());
+        genesis = CreateGenesisBlock(coinbase_sig, CScript(OP_RETURN), 1296688602, 2, 0x207fffff, 1, 50 * COIN);
+        consensus.hashGenesisBlock = genesis.GetHash();
+        checkpointData = {
+            {
+                {0, consensus.hashGenesisBlock},
+            }
+        };
+    }
+};
+
 static std::unique_ptr<const CChainParams> globalChainParams;
 
 const CChainParams &Params() {
@@ -503,6 +529,7 @@ const CChainParams &Params() {
 
 std::unique_ptr<const CChainParams> CreateChainParams(const std::string& chain)
 {
+    // Reserved names for non-custom chains
     if (chain == CBaseChainParams::MAIN)
         return std::unique_ptr<CChainParams>(new CMainParams());
     else if (chain == CBaseChainParams::TESTNET)
@@ -512,7 +539,8 @@ std::unique_ptr<const CChainParams> CreateChainParams(const std::string& chain)
     else if (chain == CBaseChainParams::SIGNET) {
         return std::unique_ptr<CChainParams>(new SigNetParams(gArgs));
     }
-    throw std::runtime_error(strprintf("%s: Unknown chain %s.", __func__, chain));
+
+    return std::unique_ptr<CChainParams>(new CCustomParams(chain, gArgs));
 }
 
 void SelectParams(const std::string& network)
@@ -520,4 +548,3 @@ void SelectParams(const std::string& network)
     SelectBaseParams(network);
     globalChainParams = CreateChainParams(network);
 }
-
