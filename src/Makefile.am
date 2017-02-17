@@ -80,6 +80,7 @@ BITCOIN_CORE_H = \
   addrman.h \
   base58.h \
   bloom.h \
+  blockdigest.h \
   blockencodings.h \
   chain.h \
   chainparams.h \
@@ -178,6 +179,7 @@ libbitcoin_server_a_SOURCES = \
   addrman.cpp \
   addrdb.cpp \
   bloom.cpp \
+  blockdigest.cpp \
   blockencodings.cpp \
   chain.cpp \
   checkpoints.cpp \

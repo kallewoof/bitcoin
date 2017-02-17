@@ -29,6 +29,7 @@
 #include "utilmoneystr.h"
 #include "utilstrencodings.h"
 #include "validationinterface.h"
+#include "blockdigest.h"
 
 #include <boost/thread.hpp>
 
@@ -1188,6 +1189,15 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
             pfrom->fDisconnect = true;
             return false;
         }
+    }
+
+    if (!(pfrom->GetLocalServices() & NODE_BFD) &&
+            (strCommand == NetMsgType::GETBFD))
+    {
+        fprintf(stderr, "Misbehaving node (BFD commands disabled on this node)\n");
+        LOCK(cs_main);
+        Misbehaving(pfrom->GetId(), 100);
+        return false;
     }
 
     if (strCommand == NetMsgType::REJECT)
@@ -2519,6 +2529,27 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
         if (bPingFinished) {
             pfrom->nPingNonceSent = 0;
         }
+    }
+    
+    
+    else if (strCommand == NetMsgType::BFD)
+    {
+        // TODO: Do something? We don't really support this in the Bitcoin Core
+        // TODO: client itself. One use case would be to sync up a node which
+        // TODO: intends to prune blocks, though.
+        LogPrint("net", "received unrequested BFD; ignoring\n");
+    }
+    
+    
+    else if (strCommand == NetMsgType::GETBFD)
+    {
+        int32_t desiredBlockHeight;
+        vRecv >> desiredBlockHeight;
+        printf("GetBFD %d\n", desiredBlockHeight);
+
+        DigestFilter::digest<DigestFilter::bloom_filter> d;
+        d.populate(desiredBlockHeight);
+        connman.PushMessage(pfrom, msgMaker.Make(NetMsgType::BFD, d));
     }
 
 

@@ -240,6 +240,21 @@ extern const char *GETBLOCKTXN;
  * @since protocol version 70014 as described by BIP 152
  */
 extern const char *BLOCKTXN;
+/**
+ * Contains a DigestFilter::digest_req.
+ * Peer should respond with a "bfd" nessage with a best-effort attempt at
+ * covering the given request. Best-effort here means the peer will attempt
+ * to give as good precision as possible, with perfect recall.
+ * E.g. a request for the 3 latest blocks will usually result in the last hour
+ * (~6 blocks), depending on caching.
+ */
+extern const char *GETBFD;
+/**
+ * Contains a DigestFilter::digest.
+ * Sent in response to a "getbfd" message.
+ * @since protocol version TODO as described by BIP TODO
+ */
+extern const char *BFD;
 };
 
 /* Get a vector of all valid message types (see above) */
@@ -267,6 +282,8 @@ enum ServiceFlags : uint64_t {
     // NODE_XTHIN means the node supports Xtreme Thinblocks
     // If this is turned off then the node will not service nor make xthin requests
     NODE_XTHIN = (1 << 4),
+    // NODE_BFD indicates support for block filter digests
+    NODE_BFD = (1 << 5),
 
     // Bits 24-31 are reserved for temporary experiments. Just pick a bit that
     // isn't getting used, or one not being used much, and notify the
@@ -329,9 +346,11 @@ enum GetDataMsg
     // The following can only occur in getdata. Invs always use TX or BLOCK.
     MSG_FILTERED_BLOCK = 3,  //!< Defined in BIP37
     MSG_CMPCT_BLOCK = 4,     //!< Defined in BIP152
+    // MSG_DIGEST_BLOCK = 5,    //!< Defined in BIP TODO <Assign number to BIP>
     MSG_WITNESS_BLOCK = MSG_BLOCK | MSG_WITNESS_FLAG, //!< Defined in BIP144
     MSG_WITNESS_TX = MSG_TX | MSG_WITNESS_FLAG,       //!< Defined in BIP144
     MSG_FILTERED_WITNESS_BLOCK = MSG_FILTERED_BLOCK | MSG_WITNESS_FLAG,
+    // MSG_DIGEST_WITNESS_BLOCK = MSG_DIGEST | MSG_WITNESS_FLAG,
 };
 
 /** inv message data */
