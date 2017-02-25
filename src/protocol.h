@@ -255,6 +255,15 @@ extern const char *GETBFD;
  * @since protocol version TODO as described by BIP TODO
  */
 extern const char *BFD;
+/**
+ * Contains a DigestFilter::digest_req.
+ * Peer should respond with a "bfdh" message covering the given request.
+ */
+extern const char *GETBFDH;
+/**
+ * Contains a hash of the BFD.
+ */
+extern const char *BFDH;
 };
 
 /* Get a vector of all valid message types (see above) */

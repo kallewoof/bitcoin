@@ -1192,7 +1192,8 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
     }
 
     if (!(pfrom->GetLocalServices() & NODE_BFD) &&
-            (strCommand == NetMsgType::GETBFD))
+            (strCommand == NetMsgType::GETBFD ||
+             strCommand == NetMsgType::GETBFDH))
     {
         fprintf(stderr, "Misbehaving node (BFD commands disabled on this node)\n");
         LOCK(cs_main);
@@ -2539,6 +2540,15 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
         // TODO: intends to prune blocks, though.
         LogPrint("net", "received unrequested BFD; ignoring\n");
     }
+
+
+    else if (strCommand == NetMsgType::BFDH)
+    {
+        // TODO: Do something? We don't really support this in the Bitcoin Core
+        // TODO: client itself. One use case would be to sync up a node which
+        // TODO: intends to prune blocks, though.
+        LogPrint("net", "received unrequested BFDH; ignoring\n");
+    }
     
     
     else if (strCommand == NetMsgType::GETBFD)
@@ -2550,6 +2560,20 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
         DigestFilter::digest<DigestFilter::bloom_filter> d;
         d.populate(desiredBlockHeight);
         connman.PushMessage(pfrom, msgMaker.Make(NetMsgType::BFD, d));
+    }
+
+
+    else if (strCommand == NetMsgType::GETBFDH)
+    {
+        int32_t desiredBlockHeight;
+        vRecv >> desiredBlockHeight;
+        printf("GetBFDH %d\n", desiredBlockHeight);
+
+        DigestFilter::digest<DigestFilter::bloom_filter> d;
+        d.populate(desiredBlockHeight);
+        CHashWriter ss(SER_GETHASH, 0);
+        ss << d;
+        connman.PushMessage(pfrom, msgMaker.Make(NetMsgType::BFDH, ss.GetHash()));
     }
 
 
