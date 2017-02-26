@@ -19,9 +19,9 @@ std::vector<uint8_t> base_filter::outpoint_data(const COutPoint& outpoint) const
     return std::vector<uint8_t>(stream.begin(), stream.end());
 }
 
-std::vector<const std::vector<uint8_t>> base_filter::tx_data_vec(const CTransaction& tx) const
+std::vector<std::vector<uint8_t>> base_filter::tx_data_vec(const CTransaction& tx) const
 {
-    std::vector<const std::vector<uint8_t>> tx_data;
+    std::vector<std::vector<uint8_t>> tx_data;
     const uint256& hash = tx.GetHash();
     printf("- adding %s\n", hash.ToString().c_str());
     tx_data.emplace_back(hash.begin(), hash.end());

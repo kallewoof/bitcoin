@@ -28,16 +28,16 @@ public:
     virtual bool contains(const std::vector<uint8_t>& data) const = 0;
     
     std::vector<uint8_t> outpoint_data(const COutPoint& outpoint) const;
-    std::vector<const std::vector<uint8_t>> tx_data_vec(const CTransaction& tx) const;
+    std::vector<std::vector<uint8_t>> tx_data_vec(const CTransaction& tx) const;
     
     void digest_block(const CBlock& block);
     void digest_tx(const CTransaction& tx);
 
-    virtual void insert(const std::vector<const std::vector<uint8_t>>& data_vec) {
+    virtual void insert(const std::vector<std::vector<uint8_t>>& data_vec) {
         for (const std::vector<uint8_t>& d : data_vec) insert(d);
     }
 
-    virtual bool contains(const std::vector<const std::vector<uint8_t>>& data_vec) const {
+    virtual bool contains(const std::vector<std::vector<uint8_t>>& data_vec) const {
         for (const std::vector<uint8_t>& d : data_vec) if (contains(d)) return true;
         return false;
     }
