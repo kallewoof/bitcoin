@@ -2531,8 +2531,8 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
             pfrom->nPingNonceSent = 0;
         }
     }
-    
-    
+
+
     else if (strCommand == NetMsgType::BFD)
     {
         // TODO: Do something? We don't really support this in the Bitcoin Core
@@ -2549,8 +2549,8 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
         // TODO: intends to prune blocks, though.
         LogPrint("net", "received unrequested BFDH; ignoring\n");
     }
-    
-    
+
+
     else if (strCommand == NetMsgType::GETBFD)
     {
         int32_t desiredBlockHeight;

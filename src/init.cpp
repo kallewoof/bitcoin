@@ -1034,7 +1034,7 @@ bool AppInitParameterInteraction()
 
     if (GetBoolArg("-peerbloomfilters", DEFAULT_PEERBLOOMFILTERS))
         nLocalServices = ServiceFlags(nLocalServices | NODE_BLOOM);
-    
+
     if (GetBoolArg("-bfd", DEFAULT_BFD)) {
         nLocalServices = ServiceFlags(nLocalServices | NODE_BFD);
     }

@@ -26,10 +26,10 @@ public:
     virtual void insert(const std::vector<uint8_t>& data) = 0;
     virtual void clear() = 0;
     virtual bool contains(const std::vector<uint8_t>& data) const = 0;
-    
+
     std::vector<uint8_t> outpoint_data(const COutPoint& outpoint) const;
     std::vector<std::vector<uint8_t>> tx_data_vec(const CTransaction& tx) const;
-    
+
     void digest_block(const CBlock& block);
     void digest_tx(const CTransaction& tx);
 
