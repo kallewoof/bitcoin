@@ -2,6 +2,7 @@
 
 #include "test/gen/crypto_gen.h"
 #include "test/gen/script_gen.h"
+#include "test/gen/merkle_gen.h"
 
 #include "script/sign.h"
 #include "script/script.h"
@@ -73,6 +74,27 @@ SpendingInfo sign(const SPKCKeyPair& spk_keys, const CScript& redeemScript = CSc
     return tup;
 }
 
+/** Helper function to generate a tx that spends a spk */
+SpendingInfo signMBV(const SPKCKeyPair& spk_keys, const CScriptWitness& witness, const CScript& redeemScript = CScript()) {
+    const int inputIndex = 0;
+    const CAmount nValue = 0;
+    const CScript& spk = spk_keys.first;
+    const std::vector<CKey>& keys = spk_keys.second;
+    CBasicKeyStore store;
+    for (const auto k: keys) {
+      store.AddKey(k);
+    }
+    //add redeem script
+    store.AddCScript(redeemScript);
+    CMutableTransaction creditingTx = BuildCreditingTransaction(spk,nValue);
+    CMutableTransaction spendingTx = BuildSpendingTransaction(CScript(), witness, creditingTx);
+    CTransaction spendingTxConst(spendingTx);
+    const CTxOut& output = creditingTx.vout[0];
+    const CTransaction finalTx = CTransaction(spendingTx);
+    SpendingInfo tup = std::make_tuple(output,finalTx,inputIndex);
+    return tup;
+}
+
 /** A signed tx that validly spends a P2PKSPK */
 rc::Gen<SpendingInfo> SignedP2PKTx() {
   return rc::gen::map(P2PKSPK(), [](const SPKCKeyPair& spk_key) {
@@ -122,4 +144,17 @@ rc::Gen<SpendingInfo> SignedTx() {
   return rc::gen::oneOf(SignedP2PKTx(), SignedP2PKHTx(),
     SignedMultisigTx(), SignedP2SHTx(), SignedP2WPKHTx(),
     SignedP2WSHTx());
+}
+
+/** Generates a arbitrary valid mbv tx */
+rc::Gen<SpendingInfo> MBVTx() {
+  return rc::gen::mapcat(rc::gen::arbitrary<uint256>(), [](const uint256& hash) {
+    return rc::gen::map(GenerateMBVScript(hash), [](const std::pair<CScriptWitness, CScript>& p) {
+      const CScriptWitness& witness = p.first;
+      const CScript& redeemScript = p.second;
+      std::vector<CKey> keys;
+      const CScript& p2wsh = GetScriptForWitness(redeemScript);
+      return signMBV(std::make_pair(p2wsh,keys), witness, redeemScript);
+    });
+  });
 }

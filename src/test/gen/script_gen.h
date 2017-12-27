@@ -29,6 +29,8 @@ rc::Gen<SPKCKeyPair> P2WPKHSPK();
 
 rc::Gen<SPKCKeyPair> P2WSHSPK();
 
+//rc::Gen<T> MBVSPK();
+
 namespace rc {
   
   template<>

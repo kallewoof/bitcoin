@@ -4,6 +4,7 @@
 #include "key.h"
 #include "base58.h"
 #include "script/script.h"
+#include "script/script_error.h"
 #include "policy/policy.h"
 #include "primitives/transaction.h"
 #include "uint256.h"
@@ -19,6 +20,8 @@
 #include <rapidcheck/gen/Arbitrary.h>
 #include <rapidcheck/Gen.h>
 
+#include <core_io.h>
+
 BOOST_FIXTURE_TEST_SUITE(transaction_properties, BasicTestingSetup)
 /** Helper function to run a SpendingInfo through the interpreter to check
   * validity of the transaction spending a spk */
@@ -31,8 +34,10 @@ bool run(SpendingInfo info) {
   TransactionSignatureChecker checker(&tx,input_idx,output.nValue);
   const CScriptWitness wit = input.scriptWitness;
   //run it through the interpreter
+  ScriptError serror;
   bool result = VerifyScript(scriptSig,output.scriptPubKey,
-    &wit, STANDARD_SCRIPT_VERIFY_FLAGS, checker);
+    &wit, STANDARD_SCRIPT_VERIFY_FLAGS, checker, &serror);
+  printf("serror: %s\n",ScriptErrorString(serror));
   return result;
 }
 /** Check COutpoint serialization symmetry */ 
@@ -99,6 +104,13 @@ RC_BOOST_PROP(spend_p2wpkh_tx, ()) {
 
 RC_BOOST_PROP(spend_p2wsh_tx, ()) {
   const SpendingInfo& info = *SignedP2WSHTx();
+  RC_ASSERT(run(info));
+}
+
+RC_BOOST_PROP(spend_mbv_tx, ()) {
+  const SpendingInfo& info = *MBVTx();
+  const CTransaction tx = std::get<1>(info);
+//  std::cout << "tx: "  << EncodeHexTx(tx) << std::endl;
   RC_ASSERT(run(info));
 }
 

@@ -34,6 +34,9 @@ rc::Gen<SpendingInfo> SignedP2WSHTx();
 /** Generates a arbitrary validly signed tx */
 rc::Gen<SpendingInfo> SignedTx();
 
+/** Generates a arbitrary valid mbv tx */
+rc::Gen<SpendingInfo> MBVTx();
+
 namespace rc {
   /** Generator for a COutPoint */ 
   template<>

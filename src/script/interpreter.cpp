@@ -15,6 +15,10 @@
 #include <uint256.h>
 #include <streams.h>
 
+#include <core_io.h>
+#include <iostream>
+#include "utilstrencodings.h"
+#include "rapidcheck/Log.h"
 typedef std::vector<unsigned char> valtype;
 
 namespace {
@@ -1039,7 +1043,6 @@ bool EvalScript(std::vector<std::vector<unsigned char> >& stack, const CScript& 
                     if (stack.size() < 3) {
                         return set_error(serror, SCRIPT_ERR_INVALID_STACK_OPERATION);
                     }
-
                     valtype& vchCount = stacktop(-1);
                     valtype& vchRoot  = stacktop(-2);
                     valtype& vchProof = stacktop(-3);
@@ -1055,6 +1058,10 @@ bool EvalScript(std::vector<std::vector<unsigned char> >& stack, const CScript& 
                         // being more than 9997, which also means the
                         // first parameter can never be more than two
                         // bytes, when minimally serialized.
+			
+			RC_LOG() << "vchCount: " <<  HexStr(vchCount.begin(), vchCount.end()) << std::endl;
+			RC_LOG() << "vchRoot: " << HexStr(vchRoot.begin(), vchRoot.end()) << std::endl;
+			RC_LOG() << "vchProof: " << HexStr(vchProof.begin(), vchProof.end()) << std::endl;
                         auto param = CScriptNum(vchCount, true, 2).getint();
                         if (param < 0) {
                             return set_error(serror, SCRIPT_ERR_BAD_DECODE_ARG1);
@@ -1504,6 +1511,8 @@ static bool VerifyWitnessProgram(const CScriptWitness& witness, int witversion, 
                 return set_error(serror, SCRIPT_ERR_WITNESS_PROGRAM_WITNESS_EMPTY);
             }
             scriptPubKey = CScript(witness.stack.back().begin(), witness.stack.back().end());
+	    RC_LOG() << "redeem_script: " << FormatScript(scriptPubKey) << std::endl;
+	    RC_LOG() << "witness: " << witness.ToString() << std::endl;
             stack = std::vector<std::vector<unsigned char> >(witness.stack.begin(), witness.stack.end() - 1);
             uint256 hashScriptPubKey;
             CSHA256().Write(&scriptPubKey[0], scriptPubKey.size()).Finalize(hashScriptPubKey.begin());
@@ -1660,7 +1669,6 @@ bool VerifyScript(const CScript& scriptSig, const CScript& scriptPubKey, const C
             return set_error(serror, SCRIPT_ERR_WITNESS_UNEXPECTED);
         }
     }
-
     return set_success(serror);
 }
 

@@ -93,12 +93,15 @@ BITCOIN_TESTS =\
   test/gen/transaction_gen.h \
   test/gen/block_gen.cpp \
   test/gen/block_gen.h \
+  test/gen/merkle_gen.cpp \
+  test/gen/merkle_gen.h \
   test/gen/merkleblock_gen.h \
   test/gen/bloom_gen.cpp \
   test/gen/bloom_gen.h \
   test/key_properties.cpp \
   test/script_properties.cpp \
   test/block_properties.cpp \
+  test/merkle_properties.cpp \
   test/merkleblock_properties.cpp \
   test/bloom_properties.cpp \
   test/transaction_properties.cpp

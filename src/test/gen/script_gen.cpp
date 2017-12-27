@@ -1,6 +1,7 @@
 #include "test/gen/script_gen.h"
-
 #include "test/gen/crypto_gen.h"
+
+#include "consensus/merkle.h"
 #include "script/script.h"
 #include "script/standard.h"
 #include "base58.h"
@@ -79,3 +80,34 @@ rc::Gen<SPKCKeyPair> P2WSHSPK() {
     return std::make_pair(wit_spk, keys);
   });
 }
+
+/** An arbitrary merkle-branch-verify spk */
+/*rc::Gen<T> MBVSPK() {
+  //1. The root hash of the Merkle tree;
+  //2. The hash values to be verified, a set usually consisting of the double-SHA256 hash of data elements,
+  //   but potentially the labels of inner nodes instead, or both;
+  //3. The paths from the root to the nodes containing the values under consideration,
+  //   expressed as a serialized binary tree structure; and
+  //4. The hash values of branches not taken along those paths.
+
+  // script interpreter fails if:
+  //   the stack contains less than three (3) items;
+  //   the first item on the stack is more than 2 bytes;
+  //   the first item on the stack, interpreted as an integer, N, is negative or not minimally encoded;
+  //   the second item on the stack is not exactly 32 bytes;
+  //   the third item on the stack is not a serialized Merkle tree inclusion proof as specified by BIP98[1]
+  //     and requiring exactly floor(N/2) VERIFY hashes; or
+  //   the remainder of the stack contains less than floor(N/2) additional items,
+  //     together referred to as the input stack elements.
+
+  return rc::gen::map(rc::gen::arbitrary<std::vector<uint256>>(), [](std::vector<uint256> txids) {
+    const std::vector<uint256>& verifyHashes = {txids[0]};
+    //compute fast merkle root
+    const uint256& fastMerkleRoot = ComputeFastMerkleRoot(txids);
+    const std::pair<std::vector<uint256>,uint32_t>& branch = ComputeFastMerkleBranch(txids,0);
+    CScript& spk = CScript() << CScript(branch.first.begin(), branch.first.end());
+    spk << CScript(fastMerkleRoot.begin(), fastMerkleRoot.end());
+    spk << CScriptNum(verifyHashes.size());
+    return std::make_tuple(spk, std::vector<CKey>());
+  });
+} */
