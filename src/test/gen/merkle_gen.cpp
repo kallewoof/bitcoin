@@ -11,12 +11,14 @@ rc::Gen<std::pair<MerkleProof,uint256>> GenerateProof(const uint256& hash) {
     //and then generate another random 'skip' hash
     const std::vector<uint256>& leaves = { hash, skip };
     const uint256& rootHash = ComputeFastMerkleRoot(leaves);
-    MerkleNode root;
+    const MerkleNode root = MerkleNode();
     std::vector<MerkleNode> path;
     std::vector<uint256> skips;
     path.push_back(root);
     skips.push_back(skip);
     MerkleProof proof(std::move(path),std::move(skips));
+    assert(proof.m_path == path);
+    assert(proof.m_skip == skips);
     return std::make_pair(proof,rootHash);
   });
 }
@@ -26,15 +28,16 @@ rc::Gen<std::pair<CScriptWitness, CScript>> GenerateMBVScript(const uint256& has
   return rc::gen::map(proof, [&hash](const std::pair<MerkleProof,uint256>& p) {
     const std::vector<unsigned char> root_hash = std::vector<unsigned char>(p.second.begin(), p.second.end());
     const MerkleProof& proof = p.first;
-    CScript redeemScript = CScript() << OP_MERKLEBRANCHVERIFY;
+    CScript redeemScript = CScript() << OP_MERKLEBRANCHVERIFY << OP_2DROP << OP_2DROP << OP_TRUE;
     CDataStream ss(SER_NETWORK,PROTOCOL_VERSION);
     ss << proof;
     std::vector<unsigned char> proof_ser(ss.begin(), ss.end());
     CScriptWitness witness;
-    std::vector<unsigned char> vchCount = { 0x1 };
-    RC_LOG() << "xvchCount: " << HexStr(vchCount.begin(), vchCount.end()) << std::endl;
-    RC_LOG() << "xvchRoot: " <<  HexStr(root_hash.begin(), root_hash.end()) << std::endl;
-    RC_LOG() << "xvchProof: " << HexStr(proof_ser.begin(), proof_ser.end()) << std::endl;
+    std::vector<unsigned char> vchCount = { 0x3 };
+//    RC_LOG() << "xvchCount: " << HexStr(vchCount.begin(), vchCount.end()) << std::endl;
+//    RC_LOG() << "xvchRoot: " <<  HexStr(root_hash.begin(), root_hash.end()) << std::endl;
+//    RC_LOG() << "xvchProof: " << HexStr(proof_ser.begin(), proof_ser.end()) << std::endl;
+//    RC_LOG() << "xhash: " << HexStr(hash.begin(), hash.end()) << std::endl;
     witness.stack = {
       std::vector<unsigned char>(hash.begin(), hash.end()),
       proof_ser,

@@ -29,21 +29,23 @@ RC_BOOST_PROP(merkle_node_relational, (std::pair<MerkleNode,MerkleNode> p)) {
 RC_BOOST_PROP(merkle_proof_serialization, (MerkleProof p)) {
   CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
   ss << p;
+  std::string r1 = HexStr(ss);
   MerkleProof p1;
   ss >> p1;
   CDataStream ss1(SER_NETWORK, PROTOCOL_VERSION);
   ss1 << p1;
-  RC_ASSERT(ss.str() == ss1.str());
+  RC_ASSERT(r1 == HexStr(ss1));
 }
 
 RC_BOOST_PROP(merkle_tree_serialization, (MerkleTree t)) {
   CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
   ss << t;
+  std::string r1 = HexStr(ss);
   MerkleTree t1;
   ss >> t1;
   CDataStream ss1(SER_NETWORK, PROTOCOL_VERSION);
   ss1 << t1;
-  RC_ASSERT(ss.str() == ss1.str());
+  RC_ASSERT(r1 == HexStr(ss1));
 }
 
 BOOST_AUTO_TEST_SUITE_END()

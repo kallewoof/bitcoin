@@ -21,7 +21,7 @@
 #include <rapidcheck/Gen.h>
 
 #include <core_io.h>
-
+#include <rapidcheck/Log.h>
 BOOST_FIXTURE_TEST_SUITE(transaction_properties, BasicTestingSetup)
 /** Helper function to run a SpendingInfo through the interpreter to check
   * validity of the transaction spending a spk */
@@ -37,7 +37,7 @@ bool run(SpendingInfo info) {
   ScriptError serror;
   bool result = VerifyScript(scriptSig,output.scriptPubKey,
     &wit, STANDARD_SCRIPT_VERIFY_FLAGS, checker, &serror);
-  printf("serror: %s\n",ScriptErrorString(serror));
+  RC_LOG() << "serror: " << ScriptErrorString(serror) << std::endl;
   return result;
 }
 /** Check COutpoint serialization symmetry */ 
