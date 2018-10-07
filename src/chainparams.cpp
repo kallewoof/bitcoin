@@ -293,8 +293,8 @@ public:
                 printf("%s : %s\n", a.first.c_str(), b.c_str());
             }
         }
-        if (!args.count("signet_blockscript") || !args.count("signet_siglen") || !args.count("signet_seednode")) {
-            throw std::runtime_error(strprintf("%s: Signet requires -signet_blockscript, -signet_siglen, and -signet_seednode provided.", __func__));
+        if (!args.count("signet_blockscript") || !args.count("signet_siglen")) {
+            throw std::runtime_error(strprintf("%s: Signet requires -signet_blockscript and -signet_siglen provided.", __func__));
         }
         if (args.at("signet_blockscript").size() != 1) {
             throw std::runtime_error(strprintf("%s: -signet_blockscript cannot be multiple values.", __func__));
@@ -349,7 +349,9 @@ public:
 
         vFixedSeeds.clear();
         vSeeds.clear();
-        vSeeds = args.at("signet_seednode");
+        if (args.count("signet_seednode")) {
+            vSeeds = args.at("signet_seednode");
+        }
 
         base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>{125};
         base58Prefixes[SCRIPT_ADDRESS] = std::vector<unsigned char>{87};
