@@ -32,7 +32,7 @@ bool MutableTransactionSignatureCreator::CreateSig(const SigningProvider& provid
     return true;
 }
 
-bool BlockSignatureCreator::CreateSig(const SigningProvider& provider, std::vector<unsigned char>& vchSig, const CKeyID& keyid, const CScript& scriptCode, SigVersion sigversion) const
+bool SimpleSignatureCreator::CreateSig(const SigningProvider& provider, std::vector<unsigned char>& vchSig, const CKeyID& keyid, const CScript& scriptCode, SigVersion sigversion) const
 {
     CKey key;
     if (!provider.GetKey(keyid, key)) return false;

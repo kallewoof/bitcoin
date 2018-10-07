@@ -3896,7 +3896,7 @@ void SignBlockHashWithWallet(const uint256& hash, CWallet* const pwallet)
     size_t overhead = GetSizeOfCompactSize(siglen);
     for (size_t i = 0; i < 1000; ++i) {
         SignatureData solution(solution_in);
-        res = ProduceSignature(*pwallet, BlockSignatureCreator(hash), blockscript, solution);
+        res = ProduceSignature(*pwallet, SimpleSignatureCreator(hash), blockscript, solution);
         if (!res) {
             throw JSONRPCError(RPC_VERIFY_ERROR, "could not produce a signature -- do you have the private key(s)?");
         }

@@ -78,7 +78,7 @@ bool CheckProofOfWork(const uint256& hash, unsigned int nBits, const Consensus::
 {
     if (g_solution_blocks) {
         if (hash == params.hashGenesisBlock) return true;
-        BlockSignatureChecker bsc(hash);
+        SimpleSignatureChecker bsc(hash);
         const auto& payload = g_blockheader_payload_map.at(hash);
         CScript solution = CScript(payload.begin(), payload.end());
         CScript challenge = CScript(params.blockscript.begin(), params.blockscript.end());

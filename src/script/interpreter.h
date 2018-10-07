@@ -162,14 +162,14 @@ public:
     virtual ~BaseSignatureChecker() {}
 };
 
-class BlockSignatureChecker : public BaseSignatureChecker
+class SimpleSignatureChecker : public BaseSignatureChecker
 {
 private:
     uint256 hash;
 
 public:
     const uint256& GetHash() const { return hash; }
-    BlockSignatureChecker(const uint256& hash_in) : hash(hash_in) {}
+    SimpleSignatureChecker(const uint256& hash_in) : hash(hash_in) {}
     bool CheckSig(const std::vector<unsigned char>& scriptSig, const std::vector<unsigned char>& vchPubKey, const CScript& scriptCode, SigVersion sigversion) const override;
 };
 
