@@ -340,11 +340,11 @@ public:
         nPruneAfterHeight = 1000;
 
         CHashWriter h(SER_DISK, 0);
+        h << strNetworkID;
         h << consensus.blockscript << consensus.siglen;
         uint256 hash = h.GetHash();
         CScript coinbase_sig = CScript() << std::vector<uint8_t>(hash.begin(), hash.end());
-        CScript genesis_out = CScript() << OP_RETURN;
-        genesis = CreateGenesisBlock(coinbase_sig, genesis_out, 1534313275, 0, 0x1d00ffff, 1, 50 * COIN);
+        genesis = CreateGenesisBlock(coinbase_sig, CScript(OP_TRUE), 1296688602, 2, 0x207fffff, 1, 50 * COIN);
         consensus.hashGenesisBlock = genesis.GetHash();
 
         vFixedSeeds.clear();
