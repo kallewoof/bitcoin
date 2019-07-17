@@ -30,6 +30,7 @@
 #include <script/sigcache.h>
 #include <script/standard.h>
 #include <shutdown.h>
+#include <signet.h>
 #include <timedata.h>
 #include <tinyformat.h>
 #include <txdb.h>
@@ -1165,6 +1166,11 @@ bool ReadBlockFromDisk(CBlock& block, const FlatFilePos& pos, const Consensus::P
     // Check the header
     if (!CheckProofOfWork(block.GetHash(), block.nBits, consensusParams))
         return error("ReadBlockFromDisk: Errors in block header at %s", pos.ToString());
+
+    if (consensusParams.signet_blocks && block.GetHash() != consensusParams.hashGenesisBlock && !CheckBlockSolution(block, consensusParams)) {
+        /* CheckBlockSolution() calls error(..) */
+        return false;
+    }
 
     return true;
 }
@@ -3222,6 +3228,10 @@ bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::P
     // redundant with the call in AcceptBlockHeader.
     if (!CheckBlockHeader(block, state, consensusParams, fCheckPOW))
         return false;
+
+    if (consensusParams.signet_blocks && fCheckPOW && block.GetHash() != consensusParams.hashGenesisBlock && !CheckBlockSolution(block, consensusParams)) {
+        return false;
+    }
 
     // Check the merkle root.
     if (fCheckMerkleRoot) {
