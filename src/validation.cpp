@@ -32,6 +32,7 @@
 #include <script/script.h>
 #include <script/sigcache.h>
 #include <shutdown.h>
+#include <signet.h>
 #include <timedata.h>
 #include <tinyformat.h>
 #include <txdb.h>
@@ -1169,6 +1170,12 @@ bool ReadBlockFromDisk(CBlock& block, const FlatFilePos& pos, const Consensus::P
     // Check the header
     if (!CheckProofOfWork(block.GetHash(), block.nBits, consensusParams))
         return error("ReadBlockFromDisk: Errors in block header at %s", pos.ToString());
+
+    // Signet only: check block solution, unless this is the genesis block
+    if (consensusParams.signet_blocks && block.GetHash() != consensusParams.hashGenesisBlock && !CheckBlockSolution(block, consensusParams)) {
+        /* CheckBlockSolution() calls error(..) */
+        return false;
+    }
 
     return true;
 }
@@ -3317,6 +3324,11 @@ bool CheckBlock(const CBlock& block, BlockValidationState& state, const Consensu
     // redundant with the call in AcceptBlockHeader.
     if (!CheckBlockHeader(block, state, consensusParams, fCheckPOW))
         return false;
+
+    // Signet only: check block solution, unless this is the genesis block
+    if (consensusParams.signet_blocks && fCheckPOW && block.GetHash() != consensusParams.hashGenesisBlock && !CheckBlockSolution(block, consensusParams)) {
+        return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-signet-blksig", "signet block signature validation failure");
+    }
 
     // Check the merkle root.
     if (fCheckMerkleRoot) {
