@@ -51,6 +51,7 @@ static const int MAX_URI_LENGTH = 255;
 #define QAPP_APP_NAME_DEFAULT "Bitcoin-Qt"
 #define QAPP_APP_NAME_TESTNET "Bitcoin-Qt-testnet"
 #define QAPP_APP_NAME_REGTEST "Bitcoin-Qt-regtest"
+#define QAPP_APP_NAME_SIGNET "Bitcoin-Qt-signet"
 
 /* One gigabyte (GB) in bytes */
 static constexpr uint64_t GB_BYTES{1000000000};
