@@ -33,6 +33,7 @@ disabled=(
     SC2046 # Quote this to prevent word splitting.
     SC2048 # Use "$@" (with quotes) to prevent whitespace problems.
     SC2066 # Since you double quoted this, it will not word split, and the loop will only run once.
+    SC2016 # Expressions don't expand in single quotes
     SC2086 # Double quote to prevent globbing and word splitting.
     SC2116 # Useless echo? Instead of 'cmd $(echo foo)', just use 'cmd foo'.
     SC2162 # read without -r will mangle backslashes.
