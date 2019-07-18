@@ -23,6 +23,7 @@
 #include <rpc/server.h>
 #include <rpc/util.h>
 #include <script/descriptor.h>
+#include <signet.h> // for blockToJSON signet_commitment printing
 #include <streams.h>
 #include <sync.h>
 #include <txdb.h>
@@ -154,6 +155,12 @@ UniValue blockToJSON(const CBlock& block, const CBlockIndex* tip, const CBlockIn
         result.pushKV("previousblockhash", blockindex->pprev->GetBlockHash().GetHex());
     if (pnext)
         result.pushKV("nextblockhash", pnext->GetBlockHash().GetHex());
+    if (g_signet_blocks) {
+        std::vector<uint8_t> signet_commitment;
+        if (block.GetWitnessCommitmentSection(SIGNET_HEADER, signet_commitment)) {
+            result.pushKV("signet-solution", HexStr(signet_commitment));
+        }
+    }
     return result;
 }
 
