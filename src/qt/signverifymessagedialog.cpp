@@ -202,18 +202,11 @@ void SignVerifyMessageDialog::on_verifyMessageButton_VM_clicked()
     }
 
     auto message = ui->messageIn_VM->document()->toPlainText().toStdString();
-    std::string failure = "";
-    try {
-        if (!proof::VerifySignature(message, destination, vchSig)) {
-            failure = "INVALID";
-        }
-    } catch (const proof::signing_error& error) {
-        failure = std::string("Signing error: ") + error.what();
-    }
+    auto r = proof::VerifySignature(message, destination, vchSig);
 
-    if (failure != "") {
+    if (r != proof::Result::RESULT_VALID) {
         ui->statusLabel_VM->setStyleSheet("QLabel { color: red; }");
-        ui->statusLabel_VM->setText(QString("<nobr>") + tr("Message verification failed: ") + QString(failure.c_str()) + QString("</nobr>"));
+        ui->statusLabel_VM->setText(QString("<nobr>") + tr("Message verification failed: ") + QString(proof::ResultString(r).c_str()) + QString("</nobr>"));
         return;
     }
 
