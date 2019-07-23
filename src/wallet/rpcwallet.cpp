@@ -518,11 +518,11 @@ static UniValue signmessage(const JSONRPCRequest& request)
             "\nUnlock the wallet for 30 seconds\n"
             + HelpExampleCli("walletpassphrase", "\"mypassphrase\" 30") +
             "\nCreate the signature\n"
-            + HelpExampleCli("signmessage", "\"1D1ZrZNe3JUo7ZycKEYQQiQAWd9y54F4XX\" \"my message\"") +
+            + HelpExampleCli("signmessage", "\"bc1qnvh49lfw96uxh5lgrl0qjgwseu9qg6d8c46h35\" \"my message\"") +
             "\nVerify the signature\n"
-            + HelpExampleCli("verifymessage", "\"1D1ZrZNe3JUo7ZycKEYQQiQAWd9y54F4XX\" \"signature\" \"my message\"") +
+            + HelpExampleCli("verifymessage", "\"bc1qnvh49lfw96uxh5lgrl0qjgwseu9qg6d8c46h35\" \"signature\" \"my message\"") +
             "\nAs a JSON-RPC call\n"
-            + HelpExampleRpc("signmessage", "\"1D1ZrZNe3JUo7ZycKEYQQiQAWd9y54F4XX\", \"my message\"")
+            + HelpExampleRpc("signmessage", "\"bc1qnvh49lfw96uxh5lgrl0qjgwseu9qg6d8c46h35\", \"my message\"")
         },
     }.Check(request);
 

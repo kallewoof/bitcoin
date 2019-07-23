@@ -246,19 +246,32 @@ static UniValue verifymessage(const JSONRPCRequest& request)
             {"address", RPCArg::Type::STR, RPCArg::Optional::NO, "The bitcoin address to use for the signature."},
             {"signature", RPCArg::Type::STR, RPCArg::Optional::NO, "The signature provided by the signer in base 64 encoding (see signmessage)."},
             {"message", RPCArg::Type::STR, RPCArg::Optional::NO, "The message that was signed."},
+            {"verbosity", RPCArg::Type::NUM, "0", "0 to return boolean true/false, 1 to return BIP-322 result strings."}
         },
         RPCResult{
             "true|false     (boolean) If the proof is valid or not.\n"
+        },
+        {
+            RPCResult{"if verbosity is set to 0",
+                "true|false     (boolean) If the proof is valid or not.\n"
+            },
+            RPCResult{"if verbosity is set to 1",
+                "ERROR          An error occurred.\n"
+                "INCONCLUSIVE   The consensus rules of the prover differ from the verifier. The proof looks valid, but we are not sure.\n"
+                "INCOMPLETE     Some parts of the proof were valid, but some parts were missing.\n"
+                "INVALID        The proof is invalid.\n"
+                "VALID          The proof is valid.\n"
+            },
         },
         RPCExamples{
             "\nUnlock the wallet for 30 seconds\n"
             + HelpExampleCli("walletpassphrase", "\"mypassphrase\" 30") +
             "\nCreate the signature\n"
-            + HelpExampleCli("signmessage", "\"1D1ZrZNe3JUo7ZycKEYQQiQAWd9y54F4XX\" \"my message\"") +
+            + HelpExampleCli("signmessage", "\"bc1qnvh49lfw96uxh5lgrl0qjgwseu9qg6d8c46h35\" \"my message\"") +
             "\nVerify the signature\n"
-            + HelpExampleCli("verifymessage", "\"1D1ZrZNe3JUo7ZycKEYQQiQAWd9y54F4XX\" \"signature\" \"my message\"") +
+            + HelpExampleCli("verifymessage", "\"bc1qnvh49lfw96uxh5lgrl0qjgwseu9qg6d8c46h35\" \"signature\" \"my message\"") +
             "\nAs a JSON-RPC call\n"
-            + HelpExampleRpc("verifymessage", "\"1D1ZrZNe3JUo7ZycKEYQQiQAWd9y54F4XX\", \"signature\", \"my message\"")
+            + HelpExampleRpc("verifymessage", "\"bc1qnvh49lfw96uxh5lgrl0qjgwseu9qg6d8c46h35\", \"signature\", \"my message\"")
         },
     }.Check(request);
 
@@ -267,6 +280,7 @@ static UniValue verifymessage(const JSONRPCRequest& request)
     std::string strAddress  = request.params[0].get_str();
     std::string strSign     = request.params[1].get_str();
     std::string strMessage  = request.params[2].get_str();
+    int verbosity           = request.params[3].isNull() ? 0 : request.params[3].get_int();
 
     CTxDestination destination = DecodeDestination(strAddress);
     if (!IsValidDestination(destination)) {
@@ -280,7 +294,10 @@ static UniValue verifymessage(const JSONRPCRequest& request)
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Malformed base64 encoding");
     }
 
-    return proof::VerifySignature(strMessage, destination, vchSig);
+    auto r = proof::VerifySignature(strMessage, destination, vchSig);
+
+    if (!verbosity) return r == proof::Result::RESULT_VALID;
+    return proof::ResultString(r);
 }
 
 static UniValue signmessagewithprivkey(const JSONRPCRequest& request)
@@ -290,6 +307,7 @@ static UniValue signmessagewithprivkey(const JSONRPCRequest& request)
         {
             {"privkey", RPCArg::Type::STR, RPCArg::Optional::NO, "The private key to sign the message with."},
             {"message", RPCArg::Type::STR, RPCArg::Optional::NO, "The message to create a signature of."},
+            {"address_type", RPCArg::Type::STR, "legacy", "The address type to use. Options are \"legacy\", \"p2sh-segwit\", and \"bech32\"."},
         },
         RPCResult{
             "\"signature\"          (string) The signature of the message encoded in base 64\n"
@@ -307,13 +325,18 @@ static UniValue signmessagewithprivkey(const JSONRPCRequest& request)
     std::string strPrivkey = request.params[0].get_str();
     std::string strMessage = request.params[1].get_str();
 
+    OutputType address_type = OutputType::LEGACY;
+    if (!request.params[2].isNull() && !ParseOutputType(request.params[2].get_str(), address_type)) {
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, strprintf("Unknown address type '%s'", request.params[2].get_str()));
+    }
+
     CKey key = DecodeSecret(strPrivkey);
     if (!key.IsValid()) {
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid private key");
     }
 
     std::vector<unsigned char> vchSig;
-    proof::SignMessageWithPrivateKey(key, strMessage, vchSig);
+    proof::SignMessageWithPrivateKey(key, address_type, strMessage, vchSig);
 
     return EncodeBase64(vchSig.data(), vchSig.size());
 }
@@ -542,7 +565,7 @@ static const CRPCCommand commands[] =
     { "util",               "createmultisig",         &createmultisig,         {"nrequired","keys","address_type"} },
     { "util",               "deriveaddresses",        &deriveaddresses,        {"descriptor", "range"} },
     { "util",               "getdescriptorinfo",      &getdescriptorinfo,      {"descriptor"} },
-    { "util",               "verifymessage",          &verifymessage,          {"address","signature","message"} },
+    { "util",               "verifymessage",          &verifymessage,          {"address","signature","message","verbosity"} },
     { "util",               "signmessagewithprivkey", &signmessagewithprivkey, {"privkey","message"} },
 
     /* Not shown in help */
