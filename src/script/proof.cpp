@@ -13,6 +13,7 @@ void SignMessageWithSigningProvider(SigningProvider* sp, const std::string& mess
 {
     signature_out.clear();
 
+    // if this is a P2PKH, use the legacy approach
     const PKHash *pkhash = boost::get<PKHash>(&destination);
     if (pkhash) {
         CKey key;
@@ -27,31 +28,71 @@ void SignMessageWithSigningProvider(SigningProvider* sp, const std::string& mess
             throw signing_error();
         }
     } else {
-        throw signing_error("unable to sign with non-p2pkh addresses");
+        SignMessageWorkspace p;
+
+        p.AppendDestinationChallenge(destination);
+
+        p.Prove(message, sp);
+
+        CVectorWriter w(SER_DISK, PROTOCOL_VERSION, signature_out, 0);
+        w << p.m_proof;
     }
 }
 
-void SignMessageWithPrivateKey(CKey& key, const std::string& message, std::vector<uint8_t>& signature_out)
+void SignMessageWithPrivateKey(CKey& key, OutputType address_type, const std::string& message, std::vector<uint8_t>& signature_out)
 {
-    CHashWriter ss(SER_GETHASH, 0);
-    ss << strMessageMagic << message;
+    if (address_type == OutputType::LEGACY) {
+        CHashWriter ss(SER_GETHASH, 0);
+        ss << strMessageMagic << message;
 
-    if (!key.SignCompact(ss.GetHash(), signature_out)) {
-        throw signing_error();
+        if (!key.SignCompact(ss.GetHash(), signature_out)) {
+            throw signing_error();
+        }
+    } else {
+        SignMessageWorkspace p;
+
+        p.AppendPrivKeyChallenge(key, address_type);
+
+        p.Prove(message);
+
+        CVectorWriter w(SER_DISK, PROTOCOL_VERSION, signature_out, 0);
+        w << p.m_proof;
     }
 }
 
-bool VerifySignature(const std::string& message, const CTxDestination& destination, const std::vector<uint8_t>& signature)
+Result VerifySignature(const std::string& message, const CTxDestination& destination, const std::vector<uint8_t>& signature)
 {
+    // if this is a P2PKH, use the legacy approach
     const PKHash* pkhash = boost::get<PKHash>(&destination);
     if (pkhash) {
         CHashWriter ss(SER_GETHASH, 0);
         ss << strMessageMagic << message;
         CPubKey pubkey;
-        return pubkey.RecoverCompact(ss.GetHash(), signature) && pubkey.GetID() == *pkhash;
+        return ResultFromBool(pubkey.RecoverCompact(ss.GetHash(), signature) && pubkey.GetID() == *pkhash);
     }
 
-    throw signing_error("unable to verify non-p2pkh address messages");
+    SignMessageWorkspace p;
+
+    p.AppendDestinationChallenge(destination);
+
+    CDataStream stream(signature, SER_DISK, PROTOCOL_VERSION);
+    try {
+        stream >> p.m_proof;
+        return p.Verify(message);
+    } catch (const std::runtime_error&) {
+        return Result::RESULT_ERROR;
+    }
+}
+
+Result SignMessage::Prepare(const std::vector<SignMessage>& entries, const std::string& message, std::set<CScript>& inputs_out, uint256& sighash_out, CScript& spk_out) const {
+    Result rv = Purpose::Prepare(m_scriptpubkey, inputs_out);
+    if (rv != RESULT_VALID) return rv;
+    CHashWriter hw(SER_DISK, 0);
+    std::string s = strMessageMagic + message;
+    hw << m_scriptpubkey << LimitedString<65536>(s);
+    sighash_out = hw.GetHash();
+    spk_out = m_scriptpubkey;
+    return RESULT_VALID;
 }
 
 }
