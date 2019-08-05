@@ -49,8 +49,12 @@ log "mining at maximum capacity with $idletime second delay between each block"
 log "hit ^C to stop"
 
 while true; do
-    log "generating next block"
-    blockhash=$("$MKBLOCK" "$bcli" $args) || { echo "node error; aborting" ; exit 1; }
-    log "mined block $($bcli $args getblockcount) $blockhash to $($bcli $args getconnectioncount) peer(s); idling for $idletime seconds"
+    if [ -e "reorg-list.txt" ]; then
+        ./forker.sh $bcli $args
+    else
+        log "generating next block"
+        blockhash=$("$MKBLOCK" "$bcli" $args) || { echo "node error; aborting" ; exit 1; }
+        log "mined block $($bcli $args getblockcount) $blockhash to $($bcli $args getconnectioncount) peer(s); idling for $idletime seconds"
+    fi
     sleep $idletime
 done
