@@ -273,7 +273,8 @@ class BitcoinTestFramework(metaclass=BitcoinTestMetaClass):
             extra_args = self.extra_args
         self.add_nodes(self.num_nodes, extra_args)
         self.start_nodes()
-        self.import_deterministic_coinbase_privkeys()
+        if self.chain != "signet":
+            self.import_deterministic_coinbase_privkeys()
         if not self.setup_clean_chain:
             for n in self.nodes:
                 assert_equal(n.getblockchaininfo()["blocks"], 199)
@@ -489,18 +490,19 @@ class BitcoinTestFramework(metaclass=BitcoinTestMetaClass):
             for node in self.nodes:
                 node.wait_for_rpc_connection()
 
-            # Create a 199-block-long chain; each of the 4 first nodes
-            # gets 25 mature blocks and 25 immature.
-            # The 4th node gets only 24 immature blocks so that the very last
-            # block in the cache does not age too much (have an old tip age).
-            # This is needed so that we are out of IBD when the test starts,
-            # see the tip age check in IsInitialBlockDownload().
-            for i in range(8):
-                self.nodes[0].generatetoaddress(25 if i != 7 else 24, self.nodes[i % 4].get_deterministic_priv_key().address)
-            sync_blocks(self.nodes)
+            if self.chain != "signet":
+                # Create a 199-block-long chain; each of the 4 first nodes
+                # gets 25 mature blocks and 25 immature.
+                # The 4th node gets only 24 immature blocks so that the very last
+                # block in the cache does not age too much (have an old tip age).
+                # This is needed so that we are out of IBD when the test starts,
+                # see the tip age check in IsInitialBlockDownload().
+                for i in range(8):
+                    self.nodes[0].generatetoaddress(25 if i != 7 else 24, self.nodes[i % 4].get_deterministic_priv_key().address)
+                sync_blocks(self.nodes)
 
-            for n in self.nodes:
-                assert_equal(n.getblockchaininfo()["blocks"], 199)
+                for n in self.nodes:
+                    assert_equal(n.getblockchaininfo()["blocks"], 199)
 
             # Shut them down, and clean up cache directories:
             self.stop_nodes()
