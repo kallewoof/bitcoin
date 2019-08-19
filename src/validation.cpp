@@ -3109,7 +3109,7 @@ bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::P
     if (!CheckBlockHeader(block, state, consensusParams, fCheckPOW))
         return false;
 
-    if (g_signet_blocks && really_check_pow && !CheckBlockSolution(block, consensusParams)) return false;
+    if (g_signet_blocks && fCheckPOW && block.GetHash() != consensusParams.hashGenesisBlock && !CheckBlockSolution(block, consensusParams)) return false;
 
     // Check the merkle root.
     if (fCheckMerkleRoot) {

@@ -120,7 +120,6 @@ static bool grindBlock(CBlock* pblock, uint64_t& nMaxTries, uint256& result, boo
 
 UniValue generateBlocks(std::shared_ptr<CReserveScript> coinbaseScript, int nGenerate, uint64_t nMaxTries, bool keepScript)
 {
-    static const int nInnerLoopCount = 0x10000;
     int nHeightEnd = 0;
     int nHeight = 0;
 
@@ -995,18 +994,21 @@ static UniValue estimaterawfee(const JSONRPCRequest& request)
 
 UniValue getnewblockhex(const JSONRPCRequest& request)
 {
-    RPCHelpMan{"getnewblockhex",
-        "\nGets hex representation of a proposed, unmined new signet block.\n",
-        {
-            {"coinbase_destination", RPCArg::Type::STR, RPCArg::Optional::NO, "Pay-out destination, as an address or a custom coinbase script"},
-        },
-        RPCResult{
-            "blockhex      (hex) The block hex\n"
-        },
-        RPCExamples{
-            HelpExampleCli("getnewblockhex", "bc1qkallealmkdwwyuc2tmf5c6hzmlaujq6jl38hpe")
-        }
-    }.Check(request);
+    if (request.fHelp || request.params.size() < 1 || request.params.size() > 1)
+        throw std::runtime_error(
+            RPCHelpMan{"getnewblockhex",
+                "\nGets hex representation of a proposed, unmined new signet block.\n",
+                {
+                    {"coinbase_destination", RPCArg::Type::STR, RPCArg::Optional::NO, "Pay-out destination, as an address or a custom coinbase script"},
+                },
+                RPCResult{
+                    "blockhex      (hex) The block hex\n"
+                },
+                RPCExamples{
+                    HelpExampleCli("getnewblockhex", "bc1qkallealmkdwwyuc2tmf5c6hzmlaujq6jl38hpe")
+                }
+            }.ToString()
+        );
 
     if (!g_signet_blocks) {
         throw std::runtime_error("getnewblockhex can only be used with signet networks");
@@ -1026,7 +1028,7 @@ UniValue getnewblockhex(const JSONRPCRequest& request)
     // we bump stuff to bop stuff, or merkle root will be 0, etc etc etc etc
     {
         LOCK(cs_main);
-        IncrementExtraNonce(&block, ::ChainActive().Tip(), extra_nonce);
+        IncrementExtraNonce(&block, chainActive.Tip(), extra_nonce);
     }
 
     CDataStream ssBlock(SER_NETWORK, PROTOCOL_VERSION);
@@ -1037,28 +1039,31 @@ UniValue getnewblockhex(const JSONRPCRequest& request)
 
 static UniValue grindblock(const JSONRPCRequest& request)
 {
-    RPCHelpMan{"grindblock",
-        "\nGrind the given signet block to find valid proof of work\n"
-        "May fail if it reaches maxtries attempts.\n",
-        {
-            {"blockhex", RPCArg::Type::STR, RPCArg::Optional::NO, "The block data, or a script challenge, for new Signet networks"},
-            {"maxtries", RPCArg::Type::NUM, /* default */ "1000000", "How many iterations to try."},
-        },
-        {
-            RPCResult{"for block data",
-                "blockhash     (hex) resulting block hash, or null if none was found\n"
-            },
-            RPCResult{"for script challenge",
-                "nonce         (number) resulting nonce value which satisfies the proof of work requirement"
-            },
-        },
-        RPCExamples{
-            "\nGrind a block with hex $blockhex\n"
-            + HelpExampleCli("grindblock", "$blockhex")
-            + "\nCreate a new signet network with challenge 512103ad5e0edad18cb1f0fc0d28a3d4f1f3e445640337489abb10404f2d1e086be43051ae\n"
-            + HelpExampleCli("grindblock", "512103ad5e0edad18cb1f0fc0d28a3d4f1f3e445640337489abb10404f2d1e086be43051ae")
-        },
-    }.Check(request);
+    if (request.fHelp || request.params.size() < 1 || request.params.size() > 2)
+        throw std::runtime_error(
+            RPCHelpMan{"grindblock",
+                "\nGrind the given signet block to find valid proof of work\n"
+                "May fail if it reaches maxtries attempts.\n",
+                {
+                    {"blockhex", RPCArg::Type::STR, RPCArg::Optional::NO, "The block data, or a script challenge, for new Signet networks"},
+                    {"maxtries", RPCArg::Type::NUM, /* default */ "1000000", "How many iterations to try."},
+                },
+                {
+                    RPCResult{"for block data",
+                        "blockhash     (hex) resulting block hash, or null if none was found\n"
+                    },
+                    RPCResult{"for script challenge",
+                        "nonce         (number) resulting nonce value which satisfies the proof of work requirement"
+                    },
+                },
+                RPCExamples{
+                    "\nGrind a block with hex $blockhex\n"
+                    + HelpExampleCli("grindblock", "$blockhex")
+                    + "\nCreate a new signet network with challenge 512103ad5e0edad18cb1f0fc0d28a3d4f1f3e445640337489abb10404f2d1e086be43051ae\n"
+                    + HelpExampleCli("grindblock", "512103ad5e0edad18cb1f0fc0d28a3d4f1f3e445640337489abb10404f2d1e086be43051ae")
+                },
+            }.ToString()
+        );
 
     bool grinding_nonce = false;
     CBlock block;

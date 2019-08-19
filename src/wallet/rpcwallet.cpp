@@ -4174,19 +4174,22 @@ UniValue signblock(const JSONRPCRequest& request)
         return NullUniValue;
     }
 
-    RPCHelpMan{"signblock",
-        "\nSigns a block proposal, checking that it would be accepted first.\n"
-        "(Note: only useable with signet networks.)\n",
-        {
-            {"blockhex", RPCArg::Type::STR_HEX, RPCArg::Optional::NO, "The hex-encoded block from getnewblockhex, or a filename"},
-        },
-        RPCResult{
-            " sig      (hex) The signature\n"
-        },
-        RPCExamples{
-            HelpExampleCli("signblock", "0000002018c6f2f913f9902aeab...5ca501f77be96de63f609010000000000000000015100000000")
-        },
-    }.Check(request);
+    if (request.fHelp || request.params.size() < 1 || request.params.size() > 1)
+        throw std::runtime_error(
+            RPCHelpMan{"signblock",
+                "\nSigns a block proposal, checking that it would be accepted first.\n"
+                "(Note: only useable with signet networks.)\n",
+                {
+                    {"blockhex", RPCArg::Type::STR_HEX, RPCArg::Optional::NO, "The hex-encoded block from getnewblockhex, or a filename"},
+                },
+                RPCResult{
+                    " sig      (hex) The signature\n"
+                },
+                RPCExamples{
+                    HelpExampleCli("signblock", "0000002018c6f2f913f9902aeab...5ca501f77be96de63f609010000000000000000015100000000")
+                },
+            }.ToString()
+    );
 
     if (!g_signet_blocks) {
         throw std::runtime_error("signblock can only be used with signet networks");

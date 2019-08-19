@@ -370,7 +370,7 @@ public:
 
         fDefaultConsistencyChecks = false;
         fRequireStandard = true;
-        m_is_test_chain = true;
+        m_fallback_fee_enabled = true;
     }
 };
 
