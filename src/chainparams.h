@@ -125,4 +125,9 @@ const CChainParams &Params();
  */
 void SelectParams(const std::string& chain);
 
+/**
+ * Create a Signet genesis block for the given block script/nonce.
+ */
+CBlock CreateSignetGenesisBlock(const CScript& block_script, uint32_t block_nonce=0);
+
 #endif // BITCOIN_CHAINPARAMS_H

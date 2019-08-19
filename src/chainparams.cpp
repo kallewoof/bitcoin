@@ -7,6 +7,8 @@
 
 #include <chainparamsseeds.h>
 #include <consensus/merkle.h>
+#include <hash.h> // for signet block challenge hash
+#include <signet.h>
 #include <tinyformat.h>
 #include <util/system.h>
 #include <util/strencodings.h>
@@ -17,13 +19,13 @@
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/split.hpp>
 
-static CBlock CreateGenesisBlock(const char* pszTimestamp, const CScript& genesisOutputScript, uint32_t nTime, uint32_t nNonce, uint32_t nBits, int32_t nVersion, const CAmount& genesisReward)
+static inline CBlock CreateGenesisBlock(const CScript& coinbase_sig, const CScript& genesisOutputScript, uint32_t nTime, uint32_t nNonce, uint32_t nBits, int32_t nVersion, const CAmount& genesisReward)
 {
     CMutableTransaction txNew;
     txNew.nVersion = 1;
     txNew.vin.resize(1);
     txNew.vout.resize(1);
-    txNew.vin[0].scriptSig = CScript() << 486604799 << CScriptNum(4) << std::vector<unsigned char>((const unsigned char*)pszTimestamp, (const unsigned char*)pszTimestamp + strlen(pszTimestamp));
+    txNew.vin[0].scriptSig = coinbase_sig;
     txNew.vout[0].nValue = genesisReward;
     txNew.vout[0].scriptPubKey = genesisOutputScript;
 
@@ -38,6 +40,12 @@ static CBlock CreateGenesisBlock(const char* pszTimestamp, const CScript& genesi
     return genesis;
 }
 
+static inline CBlock CreateGenesisBlock(const char* pszTimestamp, const CScript& genesisOutputScript, uint32_t nTime, uint32_t nNonce, uint32_t nBits, int32_t nVersion, const CAmount& genesisReward)
+{
+    CScript coinbase_sig = CScript() << 486604799 << CScriptNum(4) << std::vector<unsigned char>((const unsigned char*)pszTimestamp, (const unsigned char*)pszTimestamp + strlen(pszTimestamp));
+    return CreateGenesisBlock(coinbase_sig, genesisOutputScript, nTime, nNonce, nBits, nVersion, genesisReward);
+}
+
 /**
  * Build the genesis block. Note that the output of its generation
  * transaction cannot be spent since it did not originally exist in the
@@ -49,11 +57,21 @@ static CBlock CreateGenesisBlock(const char* pszTimestamp, const CScript& genesi
  *     CTxOut(nValue=50.00000000, scriptPubKey=0x5F1DF16B2B704C8A578D0B)
  *   vMerkleTree: 4a5e1e
  */
-static CBlock CreateGenesisBlock(uint32_t nTime, uint32_t nNonce, uint32_t nBits, int32_t nVersion, const CAmount& genesisReward)
+static inline CBlock CreateGenesisBlock(uint32_t nTime, uint32_t nNonce, uint32_t nBits, int32_t nVersion, const CAmount& genesisReward)
 {
     const char* pszTimestamp = "The Times 03/Jan/2009 Chancellor on brink of second bailout for banks";
     const CScript genesisOutputScript = CScript() << ParseHex("04678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef38c4f35504e51ec112de5c384df7ba0b8d578a4c702b6bf11d5f") << OP_CHECKSIG;
     return CreateGenesisBlock(pszTimestamp, genesisOutputScript, nTime, nNonce, nBits, nVersion, genesisReward);
+}
+
+CBlock CreateSignetGenesisBlock(const CScript& block_script, uint32_t block_nonce)
+{
+    CHashWriter h(SER_DISK, 0);
+    h << block_script;
+    uint256 hash = h.GetHash();
+    CScript coinbase_sig = CScript() << std::vector<uint8_t>(hash.begin(), hash.end());
+    CScript genesis_out = CScript() << OP_RETURN;
+    return CreateGenesisBlock(coinbase_sig, genesis_out, 1534313275, block_nonce, 0x1e2adc28, 1, 50 * COIN);
 }
 
 /**
@@ -63,6 +81,7 @@ class CMainParams : public CChainParams {
 public:
     CMainParams() {
         strNetworkID = "main";
+        consensus.signet_blocks = false;
         consensus.nSubsidyHalvingInterval = 210000;
         consensus.BIP16Exception = uint256S("0x00000000000002dc756eebf4f49723ed8d30cc28a5f108eb94b1ba88ac4f9c22");
         consensus.BIP34Height = 227931;
@@ -170,6 +189,7 @@ class CTestNetParams : public CChainParams {
 public:
     CTestNetParams() {
         strNetworkID = "test";
+        consensus.signet_blocks = false;
         consensus.nSubsidyHalvingInterval = 210000;
         consensus.BIP16Exception = uint256S("0x00000000dd30457c001f4095d208cc1296b0eed002427aa599874af7a432b105");
         consensus.BIP34Height = 21111;
@@ -249,12 +269,96 @@ public:
 };
 
 /**
+ * SigNet
+ */
+class SigNetParams : public CChainParams {
+public:
+    explicit SigNetParams(const ArgsManager& args) {
+        std::vector<uint8_t> bin;
+        vSeeds.clear();
+        uint32_t genesis_nonce = 0;
+
+        if (!args.IsArgSet("-signet_blockscript")) {
+            throw std::runtime_error(strprintf("%s: -signet_blockscript is mandatory for signet networks", __func__));
+        }
+        if (args.GetArgs("-signet_blockscript").size() != 1) {
+            throw std::runtime_error(strprintf("%s: -signet_blockscript cannot be multiple values.", __func__));
+        }
+        bin = ParseHex(args.GetArgs("-signet_blockscript")[0]);
+        if (args.IsArgSet("-signet_genesisnonce")) {
+            genesis_nonce = args.GetArg("-signet_genesisnonce", 0);
+        }
+        if (args.IsArgSet("-signet_seednode")) {
+            vSeeds = gArgs.GetArgs("-signet_seednode");
+        }
+
+        LogPrintf("SigNet with block script %s\n", gArgs.GetArgs("-signet_blockscript")[0]);
+
+        strNetworkID = "signet";
+        g_signet_blockscript = CScript(bin.begin(), bin.end());
+        consensus.signet_blocks = true;
+        consensus.nSubsidyHalvingInterval = 210000;
+        consensus.BIP34Height = 1;
+        consensus.BIP65Height = 1;
+        consensus.BIP66Height = 1;
+        consensus.CSVHeight = 0;
+        consensus.SegwitHeight = 0;
+        consensus.nPowTargetTimespan = 14 * 24 * 60 * 60; // two weeks
+        consensus.nPowTargetSpacing = 10 * 60;
+        consensus.fPowAllowMinDifficultyBlocks = false;
+        consensus.fPowNoRetargeting = false;
+        consensus.nRuleChangeActivationThreshold = 1916;
+        consensus.nMinerConfirmationWindow = 2016;
+        consensus.powLimit = uint256S("00002adc28cf53b63c82faa55d83e40ac63b5f100aa5d8df62a429192f9e8ce5");
+        consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].bit = 28;
+        consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].nStartTime = 1539478800;
+        consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].nTimeout = Consensus::BIP9Deployment::NO_TIMEOUT;
+
+        pchMessageStart[0] = 0xf0;
+        pchMessageStart[1] = 0xc7;
+        pchMessageStart[2] = 0x70;
+        pchMessageStart[3] = 0x6a;
+        nDefaultPort = 38333;
+        nPruneAfterHeight = 1000;
+
+        genesis = CreateSignetGenesisBlock(g_signet_blockscript, genesis_nonce);
+        consensus.hashGenesisBlock = genesis.GetHash();
+
+        // Now that genesis block has been generated, we check if there is an enforcescript, and switch
+        // to that one, as we will not be using the real block script anymore
+        if (args.IsArgSet("-signet_enforcescript")) {
+            if (args.GetArgs("-signet_enforcescript").size() != 1) {
+                throw std::runtime_error(strprintf("%s: -signet_enforcescript cannot be multiple values.", __func__));
+            }
+            bin = ParseHex(args.GetArgs("-signet_enforcescript")[0]);
+            g_signet_blockscript = CScript(bin.begin(), bin.end());
+            LogPrintf("SigNet enforce script %s\n", gArgs.GetArgs("-signet_enforcescript")[0]);
+        }
+
+        vFixedSeeds.clear();
+
+        base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>{125};
+        base58Prefixes[SCRIPT_ADDRESS] = std::vector<unsigned char>{87};
+        base58Prefixes[SECRET_KEY] =     std::vector<unsigned char>{217};
+        base58Prefixes[EXT_PUBLIC_KEY] = {0x04, 0x35, 0x87, 0xCF};
+        base58Prefixes[EXT_SECRET_KEY] = {0x04, 0x35, 0x83, 0x94};
+
+        bech32_hrp = "sb" + args.GetArg("-signet_hrp", "");
+
+        fDefaultConsistencyChecks = false;
+        fRequireStandard = true;
+        m_is_test_chain = true;
+    }
+};
+
+/**
  * Regression test
  */
 class CRegTestParams : public CChainParams {
 public:
     explicit CRegTestParams(const ArgsManager& args) {
         strNetworkID = "regtest";
+        consensus.signet_blocks = false;
         consensus.nSubsidyHalvingInterval = 150;
         consensus.BIP16Exception = uint256();
         consensus.BIP34Height = 500; // BIP34 activated on regtest (Used in functional tests)
@@ -394,6 +498,9 @@ std::unique_ptr<const CChainParams> CreateChainParams(const std::string& chain)
         return std::unique_ptr<CChainParams>(new CTestNetParams());
     else if (chain == CBaseChainParams::REGTEST)
         return std::unique_ptr<CChainParams>(new CRegTestParams(gArgs));
+    else if (chain == CBaseChainParams::SIGNET) {
+        return std::unique_ptr<CChainParams>(new SigNetParams(gArgs));
+    }
     throw std::runtime_error(strprintf("%s: Unknown chain %s.", __func__, chain));
 }
 
@@ -402,3 +509,4 @@ void SelectParams(const std::string& network)
     SelectBaseParams(network);
     globalChainParams = CreateChainParams(network);
 }
+
