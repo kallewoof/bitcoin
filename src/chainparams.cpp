@@ -40,6 +40,16 @@ static CBlock CreateGenesisBlock(const CScript& coinbase_sig, const CScript& gen
     return genesis;
 }
 
+CBlock CreateSignetGenesisBlock(const CScript& block_script, uint32_t block_nonce)
+{
+    CHashWriter h(SER_DISK, 0);
+    h << block_script;
+    uint256 hash = h.GetHash();
+    CScript coinbase_sig = CScript() << std::vector<uint8_t>(hash.begin(), hash.end());
+    CScript genesis_out = CScript() << OP_RETURN;
+    return CreateGenesisBlock(coinbase_sig, genesis_out, 1534313275, block_nonce, 0x1e2adc28, 1, 50 * COIN);
+}
+
 static CBlock CreateGenesisBlock(const char* pszTimestamp, const CScript& genesisOutputScript, uint32_t nTime, uint32_t nNonce, uint32_t nBits, int32_t nVersion, const CAmount& genesisReward)
 {
     CScript coinbase_sig = CScript() << 486604799 << CScriptNum(4) << std::vector<unsigned char>((const unsigned char*)pszTimestamp, (const unsigned char*)pszTimestamp + strlen(pszTimestamp));
@@ -502,14 +512,4 @@ void SelectParams(const std::string& network)
 {
     SelectBaseParams(network);
     globalChainParams = CreateChainParams(network);
-}
-
-CBlock CreateSignetGenesisBlock(const CScript& block_script, uint32_t block_nonce)
-{
-    CHashWriter h(SER_DISK, 0);
-    h << block_script;
-    uint256 hash = h.GetHash();
-    CScript coinbase_sig = CScript() << std::vector<uint8_t>(hash.begin(), hash.end());
-    CScript genesis_out = CScript() << OP_RETURN;
-    return CreateGenesisBlock(coinbase_sig, genesis_out, 1534313275, block_nonce, 0x1e2adc28, 1, 50 * COIN);
 }
