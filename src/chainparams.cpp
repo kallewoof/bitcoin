@@ -40,9 +40,10 @@ static CBlock CreateGenesisBlock(const CScript& coinbase_sig, const CScript& gen
     return genesis;
 }
 
-static CBlock CreateSignetGenesisBlock(const CScript& block_script, uint32_t block_nonce)
+static CBlock CreateSignetGenesisBlock(const std::string& chain_name, const CScript& block_script, uint32_t block_nonce)
 {
     CHashWriter h(SER_DISK, 0);
+    h << chain_name;
     h << block_script;
     uint256 hash = h.GetHash();
     CScript coinbase_sig = CScript() << std::vector<uint8_t>(hash.begin(), hash.end());
@@ -316,7 +317,7 @@ public:
         nDefaultPort = 38333;
         nPruneAfterHeight = 1000;
 
-        genesis = CreateSignetGenesisBlock(g_signet_blockscript, 621297);
+        genesis = CreateSignetGenesisBlock(strNetworkID, g_signet_blockscript, 621297);
         consensus.hashGenesisBlock = genesis.GetHash();
 
         // Now that genesis block has been generated, we check if there is an enforcescript, and switch
