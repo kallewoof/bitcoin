@@ -40,6 +40,17 @@ static CBlock CreateGenesisBlock(const CScript& coinbase_sig, const CScript& gen
     return genesis;
 }
 
+static CBlock CreateSignetGenesisBlock(const std::string& chain_name, const CScript& block_script, uint32_t block_nonce)
+{
+    CHashWriter h(SER_DISK, 0);
+    h << chain_name;
+    h << block_script;
+    uint256 hash = h.GetHash();
+    CScript coinbase_sig = CScript() << std::vector<uint8_t>(hash.begin(), hash.end());
+    CScript genesis_out = CScript() << OP_RETURN;
+    return CreateGenesisBlock(coinbase_sig, genesis_out, 1534313275, block_nonce, 0x1e2adc28, 1, 50 * COIN);
+}
+
 static CBlock CreateGenesisBlock(const char* pszTimestamp, const CScript& genesisOutputScript, uint32_t nTime, uint32_t nNonce, uint32_t nBits, int32_t nVersion, const CAmount& genesisReward)
 {
     CScript coinbase_sig = CScript() << 486604799 << CScriptNum(4) << std::vector<unsigned char>((const unsigned char*)pszTimestamp, (const unsigned char*)pszTimestamp + strlen(pszTimestamp));
@@ -85,6 +96,7 @@ public:
         consensus.nPowTargetSpacing = 10 * 60;
         consensus.fPowAllowMinDifficultyBlocks = false;
         consensus.fPowNoRetargeting = false;
+        consensus.signet_blocks = false;
         consensus.nRuleChangeActivationThreshold = 1916; // 95% of 2016
         consensus.nMinerConfirmationWindow = 2016; // nPowTargetTimespan / nPowTargetSpacing
         consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].bit = 28;
@@ -192,6 +204,7 @@ public:
         consensus.nPowTargetSpacing = 10 * 60;
         consensus.fPowAllowMinDifficultyBlocks = true;
         consensus.fPowNoRetargeting = false;
+        consensus.signet_blocks = false;
         consensus.nRuleChangeActivationThreshold = 1512; // 75% for testchains
         consensus.nMinerConfirmationWindow = 2016; // nPowTargetTimespan / nPowTargetSpacing
         consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].bit = 28;
@@ -262,32 +275,23 @@ public:
 class SigNetParams : public CChainParams {
 public:
     SigNetParams(const ArgsManager& args) {
-        std::vector<uint8_t> bin;
-        vSeeds.clear();
-        uint32_t genesis_nonce = 0;
 
-        if (!args.IsArgSet("-signet_blockscript")) {
-            LogPrintf("Using default signet network\n");
-            bin = ParseHex("512103ad5e0edad18cb1f0fc0d28a3d4f1f3e445640337489abb10404f2d1e086be43051ae");
-            genesis_nonce = 621297;
+        vSeeds.clear();
+        if (args.IsArgSet("-signet_seednode")) {
+            vSeeds = gArgs.GetArgs("-signet_seednode");
+        } else if (!args.IsArgSet("-signet_blockscript")) {
+            LogPrintf("Using default signet network seeds\n");
             vSeeds.push_back("178.128.221.177");
             vSeeds.push_back("2a01:7c8:d005:390::5");
             vSeeds.push_back("ntv3mtqw5wt63red.onion:38333");
-        } else {
-            if (args.GetArgs("-signet_blockscript").size() != 1) {
-                throw std::runtime_error(strprintf("%s: -signet_blockscript cannot be multiple values.", __func__));
-            }
-            bin = ParseHex(args.GetArgs("-signet_blockscript")[0]);
-            genesis_nonce = args.GetArg("-signet_genesisnonce", 0);
-            if (args.IsArgSet("-signet_seednode")) {
-                vSeeds = gArgs.GetArgs("-signet_seednode");
-            }
-
-            LogPrintf("SigNet with block script %s\n", gArgs.GetArgs("-signet_blockscript")[0]);
         }
 
-        strNetworkID = "signet";
+        const std::string signet_blockscript_str = args.GetArg("-signet_blockscript", "512103ad5e0edad18cb1f0fc0d28a3d4f1f3e445640337489abb10404f2d1e086be43051ae");
+        LogPrintf("SigNet with block script %s\n", signet_blockscript_str);
+        std::vector<uint8_t> bin = ParseHex(signet_blockscript_str);
         g_signet_blockscript = CScript(bin.begin(), bin.end());
+
+        strNetworkID = "signet";
         consensus.signet_blocks = true;
         consensus.nSubsidyHalvingInterval = 210000;
         consensus.BIP34Height = 1;
@@ -313,7 +317,7 @@ public:
         nDefaultPort = 38333;
         nPruneAfterHeight = 1000;
 
-        genesis = CreateSignetGenesisBlock(g_signet_blockscript, genesis_nonce);
+        genesis = CreateSignetGenesisBlock(strNetworkID, g_signet_blockscript, 621297);
         consensus.hashGenesisBlock = genesis.GetHash();
 
         // Now that genesis block has been generated, we check if there is an enforcescript, and switch
@@ -364,6 +368,7 @@ public:
         consensus.nPowTargetSpacing = 10 * 60;
         consensus.fPowAllowMinDifficultyBlocks = true;
         consensus.fPowNoRetargeting = true;
+        consensus.signet_blocks = false;
         consensus.nRuleChangeActivationThreshold = 108; // 75% for testchains
         consensus.nMinerConfirmationWindow = 144; // Faster than normal for regtest (144 instead of 2016)
         consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].bit = 28;
@@ -499,14 +504,4 @@ void SelectParams(const std::string& network)
 {
     SelectBaseParams(network);
     globalChainParams = CreateChainParams(network);
-}
-
-CBlock CreateSignetGenesisBlock(const CScript& block_script, uint32_t block_nonce)
-{
-    CHashWriter h(SER_DISK, 0);
-    h << block_script;
-    uint256 hash = h.GetHash();
-    CScript coinbase_sig = CScript() << std::vector<uint8_t>(hash.begin(), hash.end());
-    CScript genesis_out = CScript() << OP_RETURN;
-    return CreateGenesisBlock(coinbase_sig, genesis_out, 1534313275, block_nonce, 0x1e2adc28, 1, 50 * COIN);
 }

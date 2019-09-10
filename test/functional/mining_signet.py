@@ -25,7 +25,6 @@ private_key  = "ZFNp4W4HSatHDc4zsheMsDWgUg2uiB5PtnY2Y2hUCNCkQiF81KyV"
 pubkey       = "02c72b24ae2ee333f2da24aea66ce4338c01db8f26d0cc96f586d77edcb5238a4f"
 address      = "sb1qghzjzc0jvkjvvvymxnadmjjpu2tywmvagduwfj"
 blockscript  = "5121" + pubkey + "51ae" # 1-of-1 multisig
-genesisnonce = 405557
 
 def assert_template(node, block, expect, rehash=True):
     if rehash:
@@ -39,7 +38,7 @@ class SigMiningTest(BitcoinTestFramework):
         self.chain = "signet"
         self.num_nodes = 2
         self.setup_clean_chain = True
-        shared_args = ["-signet_blockscript=" + blockscript, "-signet_genesisnonce=" + str(genesisnonce), "-signet_seednode=localhost:1234"]
+        shared_args = ["-signet_blockscript=" + blockscript, "-signet_seednode=localhost:1234"]
         self.extra_args = [shared_args, shared_args]
 
     def skip_test_if_missing_module(self):
