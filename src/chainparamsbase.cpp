@@ -30,6 +30,7 @@ void SetupChainParamsBaseOptions()
     gArgs.AddArg("-signet_hrp", "Human readable part of bech32 address (suffixed by \"sb\"; default = \"\")", ArgsManager::ALLOW_ANY, OptionsCategory::CHAINPARAMS);
     gArgs.AddArg("-signet_enforcescript", "Blocks must satisfy the given script to be considered valid (this replaces -signet_blockscript, and is used for opt-in-reorg mode)", ArgsManager::ALLOW_STRING, OptionsCategory::CHAINPARAMS);
     gArgs.AddArg("-signet_seednode", "Specify a seed node for the signet network (may be used multiple times to specify multiple seed nodes)", ArgsManager::ALLOW_STRING, OptionsCategory::CHAINPARAMS);
+    gArgs.AddArg("-is_test_chain", "Whether it's allowed to set -acceptnonstdtxn=0 for this chain or not. Default: 1 (regtest-only)", ArgsManager::ALLOW_ANY | ArgsManager::DEBUG_ONLY, OptionsCategory::CHAINPARAMS);
 }
 
 static std::unique_ptr<CBaseChainParams> globalChainBaseParams;
