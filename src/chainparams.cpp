@@ -500,8 +500,17 @@ public:
         strNetworkID = chain;
         UpdateFromArgs(args);
 
+        consensus.signet_blocks = args.IsArgSet("-signet_blockscript");
+        const std::string signet_script_str = gArgs.GetArg("-signet_blockscript", "");
+        LogPrintf("Custom chain %s is_signet=%s (with block script '%s')\n", strNetworkID, consensus.signet_blocks, signet_script_str);
+        std::vector<uint8_t> signet_script_bytes = ParseHex(signet_script_str);
+        g_signet_blockscript = CScript(signet_script_bytes.begin(), signet_script_bytes.end());
+
         CHashWriter h(SER_DISK, 0);
         h << strNetworkID;
+        if (consensus.signet_blocks) {
+            h << g_signet_blockscript;
+        }
         const uint256 hash = h.GetHash();
         CScript coinbase_sig = CScript() << std::vector<uint8_t>(hash.begin(), hash.end());
         genesis = CreateGenesisBlock(coinbase_sig, CScript(OP_RETURN), 1296688602, 2, 0x207fffff, 1, 50 * COIN);
@@ -511,6 +520,17 @@ public:
                 {0, consensus.hashGenesisBlock},
             }
         };
+
+        // Now that genesis block has been generated, we check if there is an enforcescript, and switch
+        // to that one, as we will not be using the real block script anymore
+        if (args.IsArgSet("-signet_enforcescript")) {
+            if (args.GetArgs("-signet_enforcescript").size() != 1) {
+                throw std::runtime_error(strprintf("%s: -signet_enforcescript cannot be multiple values.", __func__));
+            }
+            const std::vector<uint8_t> bin = ParseHex(args.GetArgs("-signet_enforcescript")[0]);
+            g_signet_blockscript = CScript(bin.begin(), bin.end());
+            LogPrintf("SigNet enforce script %s\n", gArgs.GetArgs("-signet_enforcescript")[0]);
+        }
     }
 };
 
