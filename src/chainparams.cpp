@@ -270,33 +270,17 @@ public:
 class SigNetParams : public CChainParams {
 public:
     explicit SigNetParams(const ArgsManager& args) {
-        std::vector<uint8_t> bin;
-        vSeeds.clear();
-        uint32_t genesis_nonce = 0;
-
-        if (!args.IsArgSet("-signet_blockscript")) {
-            LogPrintf("Using default signet network\n");
-            bin = ParseHex("512103ad5e0edad18cb1f0fc0d28a3d4f1f3e445640337489abb10404f2d1e086be43051ae");
-            genesis_nonce = 621297;
-            vSeeds.push_back("178.128.221.177");
-            vSeeds.push_back("2a01:7c8:d005:390::5");
-            vSeeds.push_back("ntv3mtqw5wt63red.onion:38333");
-        } else {
-            if (args.GetArgs("-signet_blockscript").size() != 1) {
-                throw std::runtime_error(strprintf("%s: -signet_blockscript cannot be multiple values.", __func__));
-            }
-            bin = ParseHex(args.GetArgs("-signet_blockscript")[0]);
-            genesis_nonce = args.GetArg("-signet_genesisnonce", 0);
-            if (args.IsArgSet("-signet_seednode")) {
-                vSeeds = gArgs.GetArgs("-signet_seednode");
-            }
-
-            LogPrintf("SigNet with block script %s\n", gArgs.GetArgs("-signet_blockscript")[0]);
-        }
-
+        LogPrintf("Using default signet network\n");
         strNetworkID = "signet";
-        g_signet_blockscript = CScript(bin.begin(), bin.end());
         consensus.signet_blocks = true;
+
+        if (args.IsArgSet("-signet_blockscript")) {
+            throw std::runtime_error(strprintf("%s: if you want a custom signet chose some other name other than -chain=signet.", __func__));
+        } else {
+            const std::vector<uint8_t> bin = ParseHex("512103ad5e0edad18cb1f0fc0d28a3d4f1f3e445640337489abb10404f2d1e086be43051ae");
+            g_signet_blockscript = CScript(bin.begin(), bin.end());
+	}
+
         consensus.nSubsidyHalvingInterval = 210000;
         consensus.BIP34Height = 1;
         consensus.BIP65Height = 1;
@@ -321,7 +305,7 @@ public:
         nDefaultPort = 38333;
         nPruneAfterHeight = 1000;
 
-        genesis = CreateSignetGenesisBlock(g_signet_blockscript, genesis_nonce);
+        genesis = CreateSignetGenesisBlock(g_signet_blockscript, 621297);
         consensus.hashGenesisBlock = genesis.GetHash();
 
         // Now that genesis block has been generated, we check if there is an enforcescript, and switch
@@ -336,6 +320,10 @@ public:
         }
 
         vFixedSeeds.clear();
+        vSeeds.clear();
+        vSeeds.push_back("178.128.221.177");
+        vSeeds.push_back("2a01:7c8:d005:390::5");
+        vSeeds.push_back("ntv3mtqw5wt63red.onion:38333");
 
         base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>{125};
         base58Prefixes[SCRIPT_ADDRESS] = std::vector<unsigned char>{87};
