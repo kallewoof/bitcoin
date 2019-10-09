@@ -43,10 +43,10 @@ def generate(node, count):
 
 class SigMiningTest(BitcoinTestFramework):
     def set_test_params(self):
-        self.chain = "signet"
+        self.chain = "signet_test"
         self.num_nodes = 2
         self.setup_clean_chain = True
-        shared_args = ["-signet_blockscript=" + blockscript, "-signet_genesisnonce=" + str(genesisnonce), "-signet_seednode=localhost:1234"]
+        shared_args = ["-signet_blockscript=" + blockscript]
         self.extra_args = [shared_args, shared_args]
 
     def skip_test_if_missing_module(self):
