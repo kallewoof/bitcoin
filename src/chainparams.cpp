@@ -314,7 +314,7 @@ public:
             if (args.GetArgs("-signet_enforcescript").size() != 1) {
                 throw std::runtime_error(strprintf("%s: -signet_enforcescript cannot be multiple values.", __func__));
             }
-            bin = ParseHex(args.GetArgs("-signet_enforcescript")[0]);
+            const std::vector<uint8_t> bin = ParseHex(args.GetArgs("-signet_enforcescript")[0]);
             g_signet_blockscript = CScript(bin.begin(), bin.end());
             LogPrintf("SigNet enforce script %s\n", gArgs.GetArgs("-signet_enforcescript")[0]);
         }
