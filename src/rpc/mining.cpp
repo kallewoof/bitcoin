@@ -100,7 +100,7 @@ static UniValue getnetworkhashps(const JSONRPCRequest& request)
     return GetNetworkHashPS(!request.params[0].isNull() ? request.params[0].get_int() : 120, !request.params[1].isNull() ? request.params[1].get_int() : -1);
 }
 
-static bool grindBlock(CBlock* pblock, uint64_t& nMaxTries, uint256& result, bool grind_only=false)
+static bool grindBlock(CBlock* pblock, uint64_t& nMaxTries, uint256& result)
 {
     while (nMaxTries > 0 && pblock->nNonce < std::numeric_limits<uint32_t>::max() && !CheckProofOfWork(pblock->GetHash(), pblock->nBits, Params().GetConsensus()) && !ShutdownRequested()) {
         ++pblock->nNonce;
@@ -111,7 +111,6 @@ static bool grindBlock(CBlock* pblock, uint64_t& nMaxTries, uint256& result, boo
     }
     if (!CheckProofOfWork(pblock->GetHash(), pblock->nBits, Params().GetConsensus())) return false;
     result = pblock->GetHash();
-    if (grind_only) return true;
     std::shared_ptr<const CBlock> shared_pblock = std::make_shared<const CBlock>(*pblock);
     if (!ProcessNewBlock(Params(), shared_pblock, true, nullptr)) {
         throw JSONRPCError(RPC_INTERNAL_ERROR, "ProcessNewBlock, block not accepted");
@@ -1016,15 +1015,12 @@ static UniValue grindblock(const JSONRPCRequest& request)
         "\nGrind the given signet block to find valid proof of work\n"
         "May fail if it reaches maxtries attempts.\n",
         {
-            {"blockhex", RPCArg::Type::STR, RPCArg::Optional::NO, "The block data, or a script challenge, for new Signet networks"},
+            {"blockhex", RPCArg::Type::STR, RPCArg::Optional::NO, "The block data"},
             {"maxtries", RPCArg::Type::NUM, /* default */ "1000000", "How many iterations to try."},
         },
         {
             RPCResult{"for block data",
                 "blockhash     (hex) resulting block hash, or null if none was found\n"
-            },
-            RPCResult{"for script challenge",
-                "nonce         (number) resulting nonce value which satisfies the proof of work requirement"
             },
         },
         RPCExamples{
@@ -1035,9 +1031,10 @@ static UniValue grindblock(const JSONRPCRequest& request)
         },
     }.Check(request);
 
-    bool grinding_nonce = false;
     CBlock block;
-    if (DecodeHexBlk(block, request.params[0].get_str())) {
+    if (!DecodeHexBlk(block, request.params[0].get_str())) {
+        throw JSONRPCError(RPC_INVALID_PARAMETER, strprintf("Parse error decoding block %s", request.params[0].get_str()));
+    } else {
         if (!Params().GetConsensus().signet_blocks) {
             throw JSONRPCError(RPC_INVALID_PARAMETER, "Grinding blocks is only possible in a signet network; if you want to make a new Signet network, provide the challenge instead");
         }
@@ -1046,17 +1043,12 @@ static UniValue grindblock(const JSONRPCRequest& request)
         if (!block.GetWitnessCommitmentSection(SIGNET_HEADER, signet_commitment)) {
             throw JSONRPCError(RPC_INVALID_PARAMETER, "Block has no signet commitment; please sign it first");
         }
-    } else {
-        auto bin = ParseHexV(request.params[0], "challenge");
-        block = CreateSignetGenesisBlock(CScript(bin.begin(), bin.end()));
-        grinding_nonce = true;
     }
 
     uint64_t max_tries = request.params[1].isNull() ? 1000000 : request.params[1].get_int();
     uint256 result;
     while (max_tries > 0 && !ShutdownRequested()) {
-        if (grindBlock(&block, max_tries, result, grinding_nonce)) {
-            if (grinding_nonce) return (uint64_t)block.nNonce;
+        if (grindBlock(&block, max_tries, result)) {
             return result.GetHex();
         }
         if (max_tries == 0) break;
