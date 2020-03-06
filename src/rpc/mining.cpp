@@ -23,6 +23,7 @@
 #include <script/script.h>
 #include <script/signingprovider.h>
 #include <shutdown.h>
+#include <signet.h>
 #include <txmempool.h>
 #include <univalue.h>
 #include <util/fees.h>
@@ -100,6 +101,24 @@ static UniValue getnetworkhashps(const JSONRPCRequest& request)
     return GetNetworkHashPS(!request.params[0].isNull() ? request.params[0].get_int() : 120, !request.params[1].isNull() ? request.params[1].get_int() : -1);
 }
 
+static bool grindBlock(CBlock* pblock, uint64_t& nMaxTries, uint256& result)
+{
+    while (nMaxTries > 0 && pblock->nNonce < std::numeric_limits<uint32_t>::max() && !CheckProofOfWork(pblock->GetHash(), pblock->nBits, Params().GetConsensus()) && !ShutdownRequested()) {
+        ++pblock->nNonce;
+        --nMaxTries;
+    }
+    if (ShutdownRequested()) {
+        return false;
+    }
+    if (!CheckProofOfWork(pblock->GetHash(), pblock->nBits, Params().GetConsensus())) return false;
+    result = pblock->GetHash();
+    std::shared_ptr<const CBlock> shared_pblock = std::make_shared<const CBlock>(*pblock);
+    if (!ProcessNewBlock(Params(), shared_pblock, true, nullptr)) {
+        throw JSONRPCError(RPC_INTERNAL_ERROR, "ProcessNewBlock, block not accepted");
+    }
+    return true;
+}
+
 static UniValue generateBlocks(const CTxMemPool& mempool, const CScript& coinbase_script, int nGenerate, uint64_t nMaxTries)
 {
     int nHeightEnd = 0;
@@ -111,6 +130,7 @@ static UniValue generateBlocks(const CTxMemPool& mempool, const CScript& coinbas
         nHeightEnd = nHeight+nGenerate;
     }
     unsigned int nExtraNonce = 0;
+    uint256 result;
     UniValue blockHashes(UniValue::VARR);
     while (nHeight < nHeightEnd && !ShutdownRequested())
     {
@@ -122,21 +142,12 @@ static UniValue generateBlocks(const CTxMemPool& mempool, const CScript& coinbas
             LOCK(cs_main);
             IncrementExtraNonce(pblock, ::ChainActive().Tip(), nExtraNonce);
         }
-        while (nMaxTries > 0 && pblock->nNonce < std::numeric_limits<uint32_t>::max() && !CheckProofOfWork(pblock->GetHash(), pblock->nBits, Params().GetConsensus()) && !ShutdownRequested()) {
-            ++pblock->nNonce;
-            --nMaxTries;
-        }
-        if (nMaxTries == 0 || ShutdownRequested()) {
-            break;
-        }
-        if (pblock->nNonce == std::numeric_limits<uint32_t>::max()) {
+        if (!grindBlock(&pblocktemplate->block, nMaxTries, result)) {
+            if (nMaxTries == 0) break;
             continue;
         }
-        std::shared_ptr<const CBlock> shared_pblock = std::make_shared<const CBlock>(*pblock);
-        if (!ProcessNewBlock(Params(), shared_pblock, true, nullptr))
-            throw JSONRPCError(RPC_INTERNAL_ERROR, "ProcessNewBlock, block not accepted");
         ++nHeight;
-        blockHashes.push_back(pblock->GetHash().GetHex());
+        blockHashes.push_back(result.GetHex());
     }
     return blockHashes;
 }
@@ -219,6 +230,10 @@ static UniValue generatetoaddress(const JSONRPCRequest& request)
     CTxDestination destination = DecodeDestination(request.params[1].get_str());
     if (!IsValidDestination(destination)) {
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Error: Invalid address");
+    }
+
+    if (Params().GetConsensus().signet_blocks) {
+        throw JSONRPCError(RPC_INVALID_PARAMETER, "Generating signet blocks require that you use getnewblockhex");
     }
 
     const CTxMemPool& mempool = EnsureMemPool();
@@ -1021,6 +1036,98 @@ static UniValue estimaterawfee(const JSONRPCRequest& request)
     return result;
 }
 
+//
+// signet
+//
+
+UniValue getnewblockhex(const JSONRPCRequest& request)
+{
+    RPCHelpMan{"getnewblockhex",
+        "\nGets hex representation of a proposed, unmined new signet block.\n",
+        {
+            {"coinbase_destination", RPCArg::Type::STR, RPCArg::Optional::NO, "Pay-out destination, as an address or a custom coinbase script"},
+        },
+        RPCResult{
+            RPCResult::Type::STR_HEX, "blockhex", "The block hex"
+        },
+        RPCExamples{
+            HelpExampleCli("getnewblockhex", "bc1qkallealmkdwwyuc2tmf5c6hzmlaujq6jl38hpe")
+        }
+    }.Check(request);
+
+    if (!Params().GetConsensus().signet_blocks) {
+        throw std::runtime_error("getnewblockhex can only be used with signet networks");
+    }
+
+    CScript coinbase_script;
+    auto str = request.params[0].get_str();
+    if (IsValidDestinationString(str)) {
+        auto dest = DecodeDestination(str);
+        coinbase_script = GetScriptForDestination(dest);
+    } else {
+        util::insert(coinbase_script, ParseHexV(str, "coinbase_script"));
+    }
+
+    const CTxMemPool& mempool = EnsureMemPool();
+
+    auto block = BlockAssembler(mempool, Params()).CreateNewBlock(coinbase_script)->block;
+    unsigned int extra_nonce = 0;
+    // we bump stuff to bop stuff, or merkle root will be 0, etc etc etc etc
+    {
+        LOCK(cs_main);
+        IncrementExtraNonce(&block, ::ChainActive().Tip(), extra_nonce);
+    }
+
+    CDataStream ssBlock(SER_NETWORK, PROTOCOL_VERSION);
+    ssBlock << block;
+
+    return HexStr(ssBlock.begin(), ssBlock.end());
+}
+
+static UniValue grindblock(const JSONRPCRequest& request)
+{
+    RPCHelpMan{"grindblock",
+        "\nGrind the given signet block to find valid proof of work\n"
+        "May fail if it reaches maxtries attempts.\n",
+        {
+            {"blockhex", RPCArg::Type::STR, RPCArg::Optional::NO, "The block data"},
+            {"maxtries", RPCArg::Type::NUM, /* default */ "1000000", "How many iterations to try."},
+        },
+        RPCResult{
+            RPCResult::Type::STR_HEX, "blockhash", "Resulting block hash, or null if none was found"
+        },
+        RPCExamples{
+            "\nGrind a block with hex $blockhex\n"
+            + HelpExampleCli("grindblock", "$blockhex")
+        },
+    }.Check(request);
+
+    CBlock block;
+    if (!DecodeHexBlk(block, request.params[0].get_str())) {
+        throw JSONRPCError(RPC_INVALID_PARAMETER, "Failed to decode block hex");
+    }
+
+    if (!Params().GetConsensus().signet_blocks) {
+        throw JSONRPCError(RPC_INVALID_PARAMETER, "Grinding blocks is only possible in a signet network");
+    }
+
+    std::vector<uint8_t> signet_commitment;
+    if (!block.GetWitnessCommitmentSection(SIGNET_HEADER, signet_commitment)) {
+        throw JSONRPCError(RPC_INVALID_PARAMETER, "Block has no signet commitment; please sign it first");
+    }
+
+    uint64_t max_tries = request.params[1].isNull() ? 1000000 : request.params[1].get_int();
+    uint256 result;
+    while (max_tries > 0 && !ShutdownRequested()) {
+        if (grindBlock(&block, max_tries, result)) {
+            return result.GetHex();
+        }
+        if (max_tries == 0) break;
+    }
+
+    return false;
+}
+
 // clang-format off
 static const CRPCCommand commands[] =
 { //  category              name                      actor (function)         argNames
@@ -1039,6 +1146,10 @@ static const CRPCCommand commands[] =
     { "util",               "estimatesmartfee",       &estimatesmartfee,       {"conf_target", "estimate_mode"} },
 
     { "hidden",             "estimaterawfee",         &estimaterawfee,         {"conf_target", "threshold"} },
+
+    /** Signet mining */
+    { "signet",             "getnewblockhex",         &getnewblockhex,         {"coinbase_destination"} },
+    { "signet",             "grindblock",             &grindblock,             {"blockhex", "maxtries"} },
 };
 // clang-format on
 

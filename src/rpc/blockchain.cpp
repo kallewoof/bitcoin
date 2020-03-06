@@ -24,6 +24,7 @@
 #include <rpc/server.h>
 #include <rpc/util.h>
 #include <script/descriptor.h>
+#include <signet.h> // for blockToJSON signet_commitment printing
 #include <streams.h>
 #include <sync.h>
 #include <txdb.h>
@@ -167,6 +168,12 @@ UniValue blockToJSON(const CBlock& block, const CBlockIndex* tip, const CBlockIn
         result.pushKV("previousblockhash", blockindex->pprev->GetBlockHash().GetHex());
     if (pnext)
         result.pushKV("nextblockhash", pnext->GetBlockHash().GetHex());
+    if (Params().GetConsensus().signet_blocks) {
+        std::vector<uint8_t> signet_commitment;
+        if (block.GetWitnessCommitmentSection(SIGNET_HEADER, signet_commitment)) {
+            result.pushKV("signet-solution", HexStr(signet_commitment));
+        }
+    }
     return result;
 }
 
@@ -1259,6 +1266,9 @@ UniValue getblockchaininfo(const JSONRPCRequest& request)
     }
 
     const Consensus::Params& consensusParams = Params().GetConsensus();
+    if (consensusParams.signet_blocks) {
+        obj.pushKV("signet-blockscript", HexStr(g_signet_blockscript));
+    }
     UniValue softforks(UniValue::VOBJ);
     BuriedForkDescPushBack(softforks, "bip34", consensusParams.BIP34Height);
     BuriedForkDescPushBack(softforks, "bip66", consensusParams.BIP66Height);
