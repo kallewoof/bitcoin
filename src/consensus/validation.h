@@ -144,4 +144,13 @@ static inline int64_t GetTransactionInputWeight(const CTxIn& txin)
     return ::GetSerializeSize(txin, PROTOCOL_VERSION | SERIALIZE_TRANSACTION_NO_WITNESS) * (WITNESS_SCALE_FACTOR - 1) + ::GetSerializeSize(txin, PROTOCOL_VERSION) + ::GetSerializeSize(txin.scriptWitness.stack, PROTOCOL_VERSION);
 }
 
+/** Index marker for when no witness commitment is present in a coinbase transaction. */
+static constexpr int NO_WITNESS_COMMITMENT{-1};
+
+/** Compute at which vout of the block's coinbase transaction the witness commitment occurs, or -1 if not found */
+int GetWitnessCommitmentIndex(const CBlock& block);
+
+/** Compute at which vout of the given coinbase transaction the witness commitment occurs, or -1 if not found */
+template<typename T> int GetWitnessCommitmentIndex(const T& tx);
+
 #endif // BITCOIN_CONSENSUS_VALIDATION_H
