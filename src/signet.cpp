@@ -53,7 +53,7 @@ uint256 GetSignetHash(const CBlock& block)
     return (CHashWriter(SER_DISK, PROTOCOL_VERSION) << block.nVersion << block.hashPrevBlock << BlockSignetMerkleRoot(block) << block.nTime << block.nBits).GetHash();
 }
 
-bool GetWitnessCommitmentSection(const CBlock& block, const std::array<uint8_t, 4>& header, std::vector<uint8_t>& result)
+bool GetWitnessCommitmentSection(const CBlock& block, Span<const uint8_t> header, std::vector<uint8_t>& result)
 {
     int cidx = GetWitnessCommitmentIndex(block);
     if (cidx == NO_WITNESS_COMMITMENT) return false;
@@ -73,7 +73,7 @@ bool GetWitnessCommitmentSection(const CBlock& block, const std::array<uint8_t, 
     return false;
 }
 
-bool SetWitnessCommitmentSection(CMutableTransaction& mtx, const std::array<uint8_t, 4>& header, const std::vector<uint8_t>& data)
+bool SetWitnessCommitmentSection(CMutableTransaction& mtx, Span<const uint8_t> header, const std::vector<uint8_t>& data)
 {
     int cidx = GetWitnessCommitmentIndex(mtx);
     if (cidx == NO_WITNESS_COMMITMENT) return false;
@@ -109,7 +109,7 @@ bool SetWitnessCommitmentSection(CMutableTransaction& mtx, const std::array<uint
     return true;
 }
 
-bool SetWitnessCommitmentSection(CBlock& block, const std::array<uint8_t, 4>& header, const std::vector<uint8_t>& data)
+bool SetWitnessCommitmentSection(CBlock& block, Span<const uint8_t> header, const std::vector<uint8_t>& data)
 {
     auto mtx = CMutableTransaction(*block.vtx[0]);
     if (!SetWitnessCommitmentSection(mtx, header, data)) return false;
