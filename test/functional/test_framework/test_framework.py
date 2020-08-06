@@ -378,7 +378,8 @@ class BitcoinTestFramework(metaclass=BitcoinTestMetaClass):
             for w in wallets[i]:
                 wallet_name = w.split('=', 1)[1]
                 n.createwallet(wallet_name=wallet_name, descriptors=self.options.descriptors)
-        self.import_deterministic_coinbase_privkeys()
+        if self.chain != "signet":
+            self.import_deterministic_coinbase_privkeys()
         if not self.setup_clean_chain:
             for n in self.nodes:
                 assert_equal(n.getblockchaininfo()["blocks"], 199)
@@ -675,19 +676,20 @@ class BitcoinTestFramework(metaclass=BitcoinTestMetaClass):
             # Set a time in the past, so that blocks don't end up in the future
             cache_node.setmocktime(cache_node.getblockheader(cache_node.getbestblockhash())['time'])
 
-            # Create a 199-block-long chain; each of the 4 first nodes
-            # gets 25 mature blocks and 25 immature.
-            # The 4th node gets only 24 immature blocks so that the very last
-            # block in the cache does not age too much (have an old tip age).
-            # This is needed so that we are out of IBD when the test starts,
-            # see the tip age check in IsInitialBlockDownload().
-            for i in range(8):
-                cache_node.generatetoaddress(
-                    nblocks=25 if i != 7 else 24,
-                    address=TestNode.PRIV_KEYS[i % 4].address,
-                )
+            if self.chain != "signet":
+                # Create a 199-block-long chain; each of the 4 first nodes
+                # gets 25 mature blocks and 25 immature.
+                # The 4th node gets only 24 immature blocks so that the very last
+                # block in the cache does not age too much (have an old tip age).
+                # This is needed so that we are out of IBD when the test starts,
+                # see the tip age check in IsInitialBlockDownload().
+                for i in range(8):
+                    cache_node.generatetoaddress(
+                        nblocks=25 if i != 7 else 24,
+                        address=TestNode.PRIV_KEYS[i % 4].address,
+                    )
 
-            assert_equal(cache_node.getblockchaininfo()["blocks"], 199)
+                assert_equal(cache_node.getblockchaininfo()["blocks"], 199)
 
             # Shut it down, and clean up cache directories:
             self.stop_nodes()
