@@ -631,11 +631,12 @@ def signet_txs(block, challenge):
     return to_spend, spend
 
 def main():
-    if len(sys.argv) != 3:
+    if len(sys.argv) < 3:
         print("Must specify bitcoin-cli binary path (e.g. `../../src/bitcoin-cli`) and scriptPubKey (hex) for block reward")
         return
     bcli = sys.argv[1]
     cb_payout_address = unhexlify(sys.argv[2])
+    bargs = sys.argv[3:]
 
     tmpl = json.load(sys.stdin)
 
@@ -662,8 +663,8 @@ def main():
 
     spendme, signme = signet_txs(block, unhexlify(signet_spk))
 
-    cp = subprocess.run([bcli,"-signet",
-                         "signrawtransactionwithwallet",
+    cp = subprocess.run([bcli, "-signet"] + bargs +
+                        ["signrawtransactionwithwallet",
                          ToHex(signme),
                          "[{\"txid\": \"%064x\", \"vout\": %d, \"scriptPubKey\": \"%s\", \"amount\": %s}]" % (spendme.sha256, 0, hexlify(spendme.vout[0].scriptPubKey).decode('ascii'), spendme.vout[0].nValue)],
                         stdout=PIPE, stderr=PIPE, input=b"")
