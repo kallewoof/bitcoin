@@ -41,4 +41,5 @@ spk=$($bcli "$@" getaddressinfo $addr | jq -r .scriptPubKey)
 #     if [ "$blockhash" != "false" ]; then break; fi
 # done
 
+if [ $? -eq 0 ]; then "$bcli" "$@" getbestblockhash; fi
 # echo $blockhash
