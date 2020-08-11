@@ -309,6 +309,7 @@ public:
         h << consensus.signet_challenge;
         uint256 hash = h.GetHash();
         memcpy(pchMessageStart, hash.begin(), 4);
+        LogPrintf("Signet magic: %s\n", HexStr(pchMessageStart, pchMessageStart + 4).c_str());
 
         nDefaultPort = 38333;
         nPruneAfterHeight = 1000;
