@@ -26,7 +26,7 @@ addr=$($bcli "$@" getnewaddress)
 spk=$($bcli "$@" getaddressinfo $addr | jq -r .scriptPubKey)
 
 "$bcli" "$@" getblocktemplate '{"rules":["signet","segwit"]}' \
-    | "$(dirname $0)"/generate.py "$bcli" $spk \
+    | "$(dirname $0)"/generate.py "$bcli" $spk "$@" \
     | "$bcli" "$@" -stdin submitblock
 
 # # start looping; we re-create the block every time we fail to grind as that resets the nonce and gives us an updated
