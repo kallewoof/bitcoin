@@ -18,6 +18,8 @@ from binascii import hexlify, unhexlify
 from io import BytesIO
 from decimal import Decimal
 
+from subprocess import PIPE
+
 MAX_BLOCK_BASE_SIZE = 1000000
 
 COIN = 100000000  # 1 btc in satoshis
@@ -663,7 +665,7 @@ def main():
                          "signrawtransactionwithwallet",
                          ToHex(signme),
                          "[{\"txid\": \"%064x\", \"vout\": %d, \"scriptPubKey\": \"%s\", \"amount\": %s}]" % (spendme.sha256, 0, hexlify(spendme.vout[0].scriptPubKey).decode('ascii'), spendme.vout[0].nValue)],
-                        capture_output=True, input=b"")
+                        stdout=PIPE, stderr=PIPE, input=b"")
 
     if cp.returncode != 0:
         sys.stderr.write("signing failed\n%s" % (cp.stderr.decode('ascii')))
