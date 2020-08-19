@@ -650,7 +650,7 @@ def main():
     block.nTime = tmpl["curtime"]
     block.nBits = int(tmpl["bits"], 16)
     block.nNonce = 0
-    block.vtx = [cbtx] + [FromHex(CTransaction(), t["data"]) for t in tmpl["transactions"][:20]]
+    block.vtx = [cbtx] + [FromHex(CTransaction(), t["data"]) for t in tmpl["transactions"]]
 
     witnonce = 0
     witroot = block.calc_witness_merkle_root()
@@ -691,5 +691,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
