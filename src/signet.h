@@ -23,8 +23,11 @@ bool CheckSignetBlockSolution(const CBlock& block, const Consensus::Params& cons
  */
 class SignetTxs {
 private:
+    struct invalid {};
+    SignetTxs(invalid i) : m_to_spend(), m_to_sign(), m_valid(false) { }
+
     template<class T1, class T2>
-    SignetTxs(const T1& to_spend, const T2& to_sign, bool valid = false) : m_to_spend{to_spend}, m_to_sign{to_sign}, m_valid(valid) { }
+    SignetTxs(const T1& to_spend, const T2& to_sign) : m_to_spend{to_spend}, m_to_sign{to_sign}, m_valid(true) { }
 
     static SignetTxs Create(const CBlock& block, const CScript& challenge);
 

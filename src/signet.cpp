@@ -83,12 +83,12 @@ SignetTxs SignetTxs::Create(const CBlock& block, const CScript& challenge)
     // responses from block coinbase tx
 
     // find and delete signet signature
-    if (block.vtx.empty()) return {tx_to_spend, tx_spending}; // no coinbase tx in block; invalid
+    if (block.vtx.empty()) return invalid(); // no coinbase tx in block; invalid
     CMutableTransaction modified_cb(*block.vtx.at(0));
 
     const int cidx = GetWitnessCommitmentIndex(block);
     if (cidx == NO_WITNESS_COMMITMENT) {
-        return {tx_to_spend, tx_spending}; // require a witness commitment
+        return invalid(); // require a witness commitment
     }
 
     CScript& witness_commitment = modified_cb.vout.at(cidx).scriptPubKey;
@@ -100,10 +100,10 @@ SignetTxs SignetTxs::Create(const CBlock& block, const CScript& challenge)
         try {
             VectorReader v(SER_NETWORK, INIT_PROTO_VERSION, signet_solution, 0);
             v >> tx_spending.vin[0].scriptSig;
-            if (!v.empty()) v >> tx_spending.vin[0].scriptWitness.stack;
-            if (!v.empty()) return {tx_to_spend, tx_spending}; // extraneous data encountered; invalid
+            v >> tx_spending.vin[0].scriptWitness.stack;
+            if (!v.empty()) return invalid(); // extraneous data encountered
         } catch (const std::exception&) {
-            return {tx_to_spend, tx_spending}; // excepted; invalid
+            return invalid(); // parsing error
         }
     }
     uint256 signet_merkle = ComputeModifiedMerkleRoot(modified_cb, block);
@@ -117,7 +117,7 @@ SignetTxs SignetTxs::Create(const CBlock& block, const CScript& challenge)
     tx_to_spend.vin[0].scriptSig << block_data;
     tx_spending.vin[0].prevout = COutPoint(tx_to_spend.GetHash(), 0);
 
-    return {tx_to_spend, tx_spending, true};
+    return {tx_to_spend, tx_spending};
 }
 
 // Signet block solution checker
