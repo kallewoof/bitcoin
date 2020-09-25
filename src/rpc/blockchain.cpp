@@ -256,11 +256,9 @@ static RPCHelpMan waitfornewblock()
                     HelpExampleCli("waitfornewblock", "1000")
             + HelpExampleRpc("waitfornewblock", "1000")
                 },
-        [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
+        [&](const RPCContext& ctx) -> UniValue
 {
-    int timeout = 0;
-    if (!request.params[0].isNull())
-        timeout = request.params[0].get_int();
+    int timeout = ctx.ParamOrDefault(0, int(0)).get_int();
 
     CUpdatedBlock block;
     {
