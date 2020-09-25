@@ -433,7 +433,7 @@ struct Sections {
 };
 
 RPCHelpMan::RPCHelpMan(std::string name, std::string description, std::vector<RPCArg> args, RPCResults results, RPCExamples examples)
-    : RPCHelpMan{std::move(name), std::move(description), std::move(args), std::move(results), std::move(examples), nullptr} {}
+    : RPCHelpMan{std::move(name), std::move(description), std::move(args), std::move(results), std::move(examples), RPCMethodImpl{}} {}
 
 RPCHelpMan::RPCHelpMan(std::string name, std::string description, std::vector<RPCArg> args, RPCResults results, RPCExamples examples, RPCMethodImpl fun)
     : m_name{std::move(name)},

@@ -329,18 +329,46 @@ struct RPCExamples {
     std::string ToDescriptionString() const;
 };
 
+class RPCHelpMan;
+class RPCContext
+{
+public:
+    const RPCHelpMan& m_helpman;
+    const JSONRPCRequest& m_request;
+    RPCContext(const RPCHelpMan& helpman, const JSONRPCRequest& request)
+        : m_helpman(helpman), m_request(request) {}
+
+    UniValue Param(size_t index) const
+    {
+        return m_request.params[index];
+    }
+    UniValue ParamOrDefault(size_t index, const UniValue& default_value) const
+    {
+        const UniValue& param = m_request.params[index];
+        return param.isNull() ? default_value : param;
+    }
+};
+
 class RPCHelpMan
 {
 public:
     RPCHelpMan(std::string name, std::string description, std::vector<RPCArg> args, RPCResults results, RPCExamples examples);
-    using RPCMethodImpl = std::function<UniValue(const RPCHelpMan&, const JSONRPCRequest&)>;
+    using RPCMethodImpl = std::function<UniValue(const RPCContext&)>;
+    using RPCLegacyMethodImpl = std::function<UniValue(const RPCHelpMan&, const JSONRPCRequest&)>;
     RPCHelpMan(std::string name, std::string description, std::vector<RPCArg> args, RPCResults results, RPCExamples examples, RPCMethodImpl fun);
+    RPCHelpMan(std::string name, std::string description, std::vector<RPCArg> args, RPCResults results, RPCExamples examples, RPCLegacyMethodImpl fun)
+        : RPCHelpMan(std::move(name), std::move(description), std::move(args), std::move(results), std::move(examples), [&](const RPCContext& ctx) -> UniValue {
+            return fun(ctx.m_helpman, ctx.m_request);
+        })
+    {}
+
 
     std::string ToString() const;
     UniValue HandleRequest(const JSONRPCRequest& request)
     {
         Check(request);
-        return m_fun(*this, request);
+        RPCContext ctx(*this, request);
+        return m_fun(ctx);
     }
     /** If the supplied number of args is neither too small nor too high */
     bool IsValidNumArgs(size_t num_args) const;
