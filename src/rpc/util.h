@@ -338,11 +338,7 @@ public:
     RPCContext(const RPCHelpMan& helpman, const JSONRPCRequest& request)
         : m_helpman(helpman), m_request(request) {}
 
-    UniValue Param(size_t index) const
-    {
-        return m_request.params[index];
-    }
-    UniValue ParamOrDefault(size_t index, const UniValue& default_value) const
+    UniValue operator()(size_t index, const UniValue& default_value = NullUniValue) const
     {
         const UniValue& param = m_request.params[index];
         return param.isNull() ? default_value : param;

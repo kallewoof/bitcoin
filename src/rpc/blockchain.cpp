@@ -258,7 +258,7 @@ static RPCHelpMan waitfornewblock()
                 },
         [&](const RPCContext& ctx) -> UniValue
 {
-    int timeout = ctx.ParamOrDefault(0, int(0)).get_int();
+    int timeout = ctx(0, int(0)).get_int();
 
     CUpdatedBlock block;
     {
@@ -613,9 +613,9 @@ static RPCHelpMan getmempoolancestors()
                 },
         [&](const RPCContext& ctx) -> UniValue
 {
-    bool fVerbose = ctx.ParamOrDefault(1, false).get_bool();
+    bool fVerbose = ctx(1, false).get_bool();
 
-    uint256 hash = ParseHashV(ctx.Param(0), "parameter 1");
+    uint256 hash = ParseHashV(ctx(0), "parameter 1");
 
     const CTxMemPool& mempool = EnsureMemPool(ctx.m_request.context);
     LOCK(mempool.cs);
