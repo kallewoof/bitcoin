@@ -372,4 +372,11 @@ BOOST_AUTO_TEST_CASE(witness_commitment_index)
 
     BOOST_CHECK_EQUAL(GetWitnessCommitmentIndex(pblock), 2);
 }
+
+BOOST_AUTO_TEST_CASE(chainparameters)
+{
+    auto chain = CreateChainParams("signet");
+    BOOST_CHECK_EQUAL(chain->GetConsensus().MinBIP9WarningHeight, 0);
+}
+
 BOOST_AUTO_TEST_SUITE_END()
